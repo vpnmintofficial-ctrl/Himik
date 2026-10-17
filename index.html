@@ -45,7 +45,6 @@
   .toast.error { border-left-color: var(--danger); }
   @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
 
-  /* AUTH */
   #auth-screen {
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh; padding: 20px;
@@ -103,7 +102,6 @@
     text-align: center; display: none;
   }
 
-  /* APP */
   #app-screen { display: none; max-width: 1000px; margin: 0 auto; padding: 16px; }
   header {
     display: flex; align-items: center; justify-content: space-between;
@@ -187,7 +185,6 @@
     font-size: .85rem; padding: 20px 10px;
   }
 
-  /* CHAT */
   .chat {
     background: var(--card); border: 1px solid var(--border);
     border-radius: var(--radius); display: flex; flex-direction: column;
@@ -248,7 +245,6 @@
   .send-btn:hover { background: #5a4bd1; }
   .send-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-  /* MODAL */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.7);
     display: none; align-items: center; justify-content: center;
@@ -301,7 +297,6 @@
 
 <div id="toast-container"></div>
 
-<!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-box">
     <h1>dox•Tox</h1>
@@ -354,7 +349,6 @@
   </div>
 </div>
 
-<!-- APP -->
 <div id="app-screen">
   <header>
     <div class="logo">dox•Tox</div>
@@ -402,7 +396,6 @@
   </div>
 </div>
 
-<!-- MENU MODAL -->
 <div class="modal-overlay" id="menu-modal" onclick="if(event.target.id==='menu-modal')closeModal('menu-modal')">
   <div class="modal" style="max-width:360px;">
     <button class="modal-close" onclick="closeModal('menu-modal')">×</button>
@@ -417,7 +410,6 @@
   </div>
 </div>
 
-<!-- ADMIN MODAL -->
 <div class="modal-overlay" id="admin-modal" onclick="if(event.target.id==='admin-modal')closeModal('admin-modal')">
   <div class="modal" style="max-width:720px;">
     <button class="modal-close" onclick="closeModal('admin-modal')">×</button>
