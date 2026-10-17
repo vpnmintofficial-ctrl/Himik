@@ -560,6 +560,23 @@ function closeChat() {
   setChatStatus('');
 }
 
+async function fetchJson(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs || 20000);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeout);
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  } catch (e) {
+    clearTimeout(timeout);
+    throw e;
+  }
+}
+
+/** Загрузка общего чата: API хранит только личные переписки.
+ *  Сообщения в "общий чат" идут на пользователя all.
+ *  Собираем все переписки all <-> каждый пользователь. */
 async function loadChatFromServer(showLoading) {
   if (isLoadingChat) return;
   isLoadingChat = true;
@@ -567,32 +584,60 @@ async function loadChatFromServer(showLoading) {
   if (showLoading) setChatStatus('Загрузка сообщений...');
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
-
-    const res = await fetch(API + '/messages?user=all&with_user=all', {
-      signal: controller.signal,
+    // 1. Список пользователей
+    const { res: usersRes, data: usersData } = await fetchJson(API + '/users', {
       headers: { 'Accept': 'application/json' }
-    });
-    clearTimeout(timeout);
+    }, 20000);
 
-    if (!res.ok) {
-      setChatStatus('Сервер ответил ' + res.status, true);
-      renderChat();
-      return;
+    let userList = [];
+    if (usersRes.ok && Array.isArray(usersData)) {
+      userList = usersData.map(u => u.username || u.name).filter(Boolean);
+      // обновляем локальную базу
+      const localUsers = getUsers();
+      usersData.forEach(u => {
+        const name = u.username || u.name;
+        if (!name || name.toLowerCase() === 'all') return;
+        localUsers[name.toLowerCase()] = {
+          name,
+          city: u.city || '—',
+          lastSeen: Date.now()
+        };
+      });
+      saveUsers(localUsers);
     }
 
-    let msgs = await res.json();
-    if (!Array.isArray(msgs)) {
-      // иногда сервер может вернуть { messages: [...] }
-      if (msgs && Array.isArray(msgs.messages)) msgs = msgs.messages;
-      else if (msgs && Array.isArray(msgs.data)) msgs = msgs.data;
-      else msgs = [];
+    // 2. Для каждого пользователя забираем сообщения с "all"
+    const allMsgs = [];
+    const seenIds = new Set();
+
+    const targets = userList.filter(n => n.toLowerCase() !== 'all');
+    // параллельно, но небольшими пачками
+    const chunkSize = 5;
+    for (let i = 0; i < targets.length; i += chunkSize) {
+      const chunk = targets.slice(i, i + chunkSize);
+      const results = await Promise.all(chunk.map(async (uname) => {
+        try {
+          const { res, data } = await fetchJson(
+            API + '/messages?user=all&with_user=' + encodeURIComponent(uname),
+            { headers: { 'Accept': 'application/json' } },
+            15000
+          );
+          if (res.ok && Array.isArray(data)) return data;
+        } catch (_) {}
+        return [];
+      }));
+      results.flat().forEach(m => {
+        if (!m) return;
+        const id = m.id != null ? String(m.id) : null;
+        if (id && seenIds.has(id)) return;
+        if (id) seenIds.add(id);
+        allMsgs.push(m);
+      });
     }
 
     const local = getChat();
     const pending = local.filter(m => m.status === 'pending' || m.status === 'failed');
-    const merged = mergeMessages(msgs, pending);
+    const merged = mergeMessages(allMsgs, pending);
 
     saveChat(merged);
     lastKnownMsgCount = merged.length;
@@ -601,8 +646,8 @@ async function loadChatFromServer(showLoading) {
     setChatStatus(merged.length ? '' : 'Нет сообщений');
   } catch (e) {
     const isAbort = e.name === 'AbortError';
-    setChatStatus(isAbort ? 'Сервер долго отвечает (возможно, просыпается)...' : 'Нет связи с сервером', true);
-    renderChat(); // показываем то, что есть локально
+    setChatStatus(isAbort ? 'Сервер долго отвечает...' : 'Нет связи с сервером', true);
+    renderChat();
   } finally {
     isLoadingChat = false;
   }
@@ -721,7 +766,6 @@ async function sendChatMessage() {
     status: 'pending'
   };
 
-  // Оптимистично добавляем в чат
   const chat = getChat();
   chat.push(tempMsg);
   saveChat(chat);
@@ -729,49 +773,41 @@ async function sendChatMessage() {
   setChatStatus('Отправка...');
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
-    const res = await fetch(API + '/send', {
+    const { res, data } = await fetchJson(API + '/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
         from_username: session,
         to_username: 'all',
         text: text
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-
-    const data = await res.json().catch(() => ({}));
+      })
+    }, 30000);
 
     if (!res.ok) {
-      throw new Error(data.detail || data.message || ('Ошибка ' + res.status));
+      const detail = (data && (data.detail || data.message)) || ('Ошибка ' + res.status);
+      // Аккаунт не существует на этом сервере
+      if (String(detail).toLowerCase().includes('отправитель') || res.status === 404) {
+        throw new Error('Аккаунт не найден на сервере. Выйди и зарегистрируйся заново.');
+      }
+      if (String(detail).toLowerCase().includes('получатель')) {
+        throw new Error('Комната чата недоступна. Попробуй позже.');
+      }
+      throw new Error(detail);
     }
 
-    // Помечаем как отправленное и сразу синхронизируемся с сервером
-    const updated = getChat().map(m => {
-      if (m.id === tempId) return { ...m, status: 'sent' };
-      return m;
-    });
+    const updated = getChat().map(m => m.id === tempId ? { ...m, status: 'sent', id: data.id || m.id } : m);
     saveChat(updated);
 
-    // Небольшая пауза, чтобы сервер успел сохранить
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 300));
     await loadChatFromServer(false);
     setChatStatus('');
   } catch (e) {
-    // Помечаем сообщение как failed
-    const updated = getChat().map(m => {
-      if (m.id === tempId) return { ...m, status: 'failed' };
-      return m;
-    });
+    const updated = getChat().map(m => m.id === tempId ? { ...m, status: 'failed' } : m);
     saveChat(updated);
     renderChat();
 
     const msg = e.name === 'AbortError'
-      ? 'Сервер не ответил (возможно, спит на Render)'
+      ? 'Сервер не ответил'
       : (e.message || 'Не удалось отправить');
     setChatStatus(msg, true);
     toast('Ошибка отправки', msg, 'error');
