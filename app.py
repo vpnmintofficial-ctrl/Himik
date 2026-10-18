@@ -1,6 +1,9 @@
 import os
 import asyncio
 import sqlite3
+import hashlib
+import hmac
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -115,6 +118,8 @@ app.add_middleware(
 )
 
 
+# ================= МОДЕЛИ ДАННЫХ =================
+
 class RegisterIn(BaseModel):
     username: str
     password: str
@@ -132,6 +137,18 @@ class SendIn(BaseModel):
     to_username: str
     text: str
 
+
+class TelegramAuthIn(BaseModel):
+    id: int
+    first_name: str = ""
+    last_name: str = ""
+    username: str = ""
+    photo_url: str = ""
+    auth_date: int
+    hash: str
+
+
+# ================= ЭНДПОИНТЫ =================
 
 @app.get("/")
 async def root():
@@ -168,6 +185,60 @@ async def login(data: LoginIn):
         raise HTTPException(401, "Неверное имя или пароль")
     return dict(user)
 
+
+# --- ВХОД ЧЕРЕЗ TELEGRAM ---
+
+@app.post("/auth/telegram")
+async def auth_telegram(data: TelegramAuthIn):
+    # 1. Извлекаем данные и убираем хэш
+    user_dict = data.model_dump()
+    check_hash = user_dict.pop("hash")
+    
+    # 2. Формируем строку для проверки (сортируем ключи, исключаем пустые)
+    data_check_string = "\n".join(
+        f"{k}={v}" for k, v in sorted(user_dict.items()) if v is not None and v != ""
+    )
+    
+    # 3. Вычисляем секретный ключ и хэш по алгоритму Telegram
+    secret_key = hashlib.sha256(BOT_TOKEN.encode()).digest()
+    calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+    # 4. Сверяем
+    if calculated_hash != check_hash:
+        raise HTTPException(401, "Неверная подпись Telegram")
+
+    # 5. Проверяем время (не старше 24 часов)
+    if time.time() - data.auth_date > 86400:
+        raise HTTPException(401, "Данные устарели")
+
+    # 6. Проверяем/создаем пользователя в БД
+    with db() as conn:
+        user = conn.execute(
+            "SELECT username, tg_id, city, bio FROM users WHERE tg_id = ?", 
+            (data.id,)
+        ).fetchone()
+        
+        if not user:
+            # Если пользователя нет — регистрируем автоматически
+            uname = data.username or f"user_{data.id}"
+            
+            # Проверка на занятость ника
+            if conn.execute("SELECT 1 FROM users WHERE username = ?", (uname,)).fetchone():
+                uname = f"{uname}_{data.id}"
+                
+            conn.execute(
+                "INSERT INTO users (username, password, tg_id, city, created_at) VALUES (?, ?, ?, ?, ?)",
+                (uname, "telegram_auth", data.id, "", int(datetime.now().timestamp()))
+            )
+            user = conn.execute(
+                "SELECT username, tg_id, city, bio FROM users WHERE tg_id = ?", 
+                (data.id,)
+            ).fetchone()
+
+    return {"ok": True, "user": dict(user)}
+
+
+# --- ОСТАЛЬНЫЕ ЭНДПОИНТЫ ---
 
 @app.post("/send")
 async def send_message(data: SendIn):
